@@ -6,22 +6,52 @@ import { FavoriteButton } from "@/components/FavoriteButton";
 import {
   FAVORITES_CHANGED_EVENT,
   getFavoriteJobIds,
+  setFavoriteJobIds as saveFavoriteJobIds,
 } from "@/lib/favorites";
 import { chinaMockJobs } from "@/lib/providers/chinaMockProvider";
+import type { Job } from "@/lib/providers/types";
 
 function formatLocation(province: string, city: string) {
   return province === city ? city : `${province} · ${city}`;
 }
 
 export default function FavoritesPage() {
-  const [favoriteJobIds, setFavoriteJobIds] = useState<string[]>([]);
+  const [favoriteJobIds, setFavoriteJobIdsState] = useState<string[]>([]);
+  const [databaseFavoriteJobs, setDatabaseFavoriteJobs] = useState<Job[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUsingFallback, setIsUsingFallback] = useState(false);
 
   useEffect(() => {
     function syncFavorites() {
-      setFavoriteJobIds(getFavoriteJobIds());
+      setFavoriteJobIdsState(getFavoriteJobIds());
+    }
+
+    async function loadFavorites() {
+      setIsLoading(true);
+
+      try {
+        const response = await fetch("/api/favorites");
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch favorite jobs");
+        }
+
+        const data = (await response.json()) as { jobIds: string[]; jobs: Job[] };
+        saveFavoriteJobIds(data.jobIds);
+        setDatabaseFavoriteJobs(data.jobs);
+        setFavoriteJobIdsState(data.jobIds);
+        setIsUsingFallback(false);
+      } catch {
+        syncFavorites();
+        setDatabaseFavoriteJobs([]);
+        setIsUsingFallback(true);
+      } finally {
+        setIsLoading(false);
+      }
     }
 
     syncFavorites();
+    void loadFavorites();
     window.addEventListener(FAVORITES_CHANGED_EVENT, syncFavorites);
     window.addEventListener("storage", syncFavorites);
 
@@ -32,11 +62,16 @@ export default function FavoritesPage() {
   }, []);
 
   const favoriteJobs = useMemo(
-    () =>
-      favoriteJobIds
+    () => {
+      if (!isUsingFallback) {
+        return databaseFavoriteJobs.filter((job) => favoriteJobIds.includes(job.id));
+      }
+
+      return favoriteJobIds
         .map((jobId) => chinaMockJobs.find((job) => job.id === jobId))
-        .filter((job): job is (typeof chinaMockJobs)[number] => Boolean(job)),
-    [favoriteJobIds],
+        .filter((job): job is (typeof chinaMockJobs)[number] => Boolean(job));
+    },
+    [databaseFavoriteJobs, favoriteJobIds, isUsingFallback],
   );
 
   return (
@@ -47,12 +82,16 @@ export default function FavoritesPage() {
             我的收藏
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-            这里会显示你在本机浏览器收藏过的职位，数据保存在 localStorage。
+            这里会优先显示数据库中保存的收藏职位，网络异常时会使用本机收藏缓存。
           </p>
         </section>
 
         <section className="mt-10">
-          {favoriteJobs.length > 0 ? (
+          {isLoading ? (
+            <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-600 shadow-lg shadow-slate-200/60">
+              正在加载收藏职位...
+            </div>
+          ) : favoriteJobs.length > 0 ? (
             <div className="grid gap-5 lg:grid-cols-2">
               {favoriteJobs.map((job) => (
                 <article
