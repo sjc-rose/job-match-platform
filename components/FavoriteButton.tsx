@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import {
   FAVORITES_CHANGED_EVENT,
+  getFavoriteJobIds,
   isFavoriteJob,
-  toggleFavoriteJob,
+  setFavoriteJobIds,
 } from "@/lib/favorites";
 
 type FavoriteButtonProps = {
@@ -24,13 +25,31 @@ export function FavoriteButton({
   className = defaultClassName,
 }: FavoriteButtonProps) {
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     function syncFavoriteState() {
       setIsFavorite(isFavoriteJob(jobId));
     }
 
+    async function syncFavoriteStateFromApi() {
+      try {
+        const response = await fetch("/api/favorites");
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch favorites");
+        }
+
+        const data = (await response.json()) as { jobIds: string[] };
+        setFavoriteJobIds(data.jobIds);
+        setIsFavorite(data.jobIds.includes(jobId));
+      } catch {
+        syncFavoriteState();
+      }
+    }
+
     syncFavoriteState();
+    void syncFavoriteStateFromApi();
     window.addEventListener(FAVORITES_CHANGED_EVENT, syncFavoriteState);
     window.addEventListener("storage", syncFavoriteState);
 
@@ -40,14 +59,42 @@ export function FavoriteButton({
     };
   }, [jobId]);
 
-  function handleClick() {
-    setIsFavorite(toggleFavoriteJob(jobId));
+  async function handleClick() {
+    const nextIsFavorite = !isFavorite;
+    const currentFavoriteJobIds = getFavoriteJobIds();
+    const nextFavoriteJobIds = nextIsFavorite
+      ? Array.from(new Set([...currentFavoriteJobIds, jobId]))
+      : currentFavoriteJobIds.filter((favoriteJobId) => favoriteJobId !== jobId);
+
+    setIsFavorite(nextIsFavorite);
+    setIsSaving(true);
+
+    try {
+      const response = await fetch("/api/favorites", {
+        method: nextIsFavorite ? "POST" : "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ jobId }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update favorite");
+      }
+
+      setFavoriteJobIds(nextFavoriteJobIds);
+    } catch {
+      setFavoriteJobIds(nextFavoriteJobIds);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
     <button
       aria-pressed={isFavorite}
       className={className}
+      disabled={isSaving}
       onClick={handleClick}
       type="button"
     >
