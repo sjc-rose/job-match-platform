@@ -143,12 +143,20 @@ export default function AdminPage() {
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
             查看职位、收藏和搜索记录的基础数据概览。
           </p>
-          <Link
-            className="mt-6 inline-flex justify-center rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
-            href="/admin/jobs"
-          >
-            职位管理
-          </Link>
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link
+              className="inline-flex justify-center rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
+              href="/admin/jobs"
+            >
+              职位管理
+            </Link>
+            <Link
+              className="inline-flex justify-center rounded-md border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-950/10"
+              href="/admin/import"
+            >
+              导入职位
+            </Link>
+          </div>
         </section>
 
         <section className="mt-10 grid gap-5 md:grid-cols-3">

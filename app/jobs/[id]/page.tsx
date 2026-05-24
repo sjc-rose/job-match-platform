@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { prisma } from "@/lib/prisma";
 import { chinaMockProvider } from "@/lib/providers/chinaMockProvider";
+import type { Job } from "@/lib/providers/types";
 
 type JobDetailPageProps = {
   params: Promise<{
@@ -9,16 +11,75 @@ type JobDetailPageProps = {
 };
 
 function formatSalary(min: number, max: number) {
-  return `${Math.round(min / 1000)}k-${Math.round(max / 1000)}k`;
+  if (min === 0 && max === 0) {
+    return "薪资面议";
+  }
+
+  if (min === 0 || max === 0) {
+    return `${min || max} 元/月`;
+  }
+
+  return `${min}-${max} 元/月`;
 }
 
 function formatLocation(province: string, city: string) {
   return province === city ? city : `${province} · ${city}`;
 }
 
+function formatPublishedAt(value: string) {
+  if (!value) {
+    return "未发布";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+function formatSource(source: string) {
+  return source === "china-mock" ? "国内示例数据" : source;
+}
+
+async function getDatabaseJob(id: string): Promise<Job | null> {
+  const job = await prisma.job.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  if (!job) {
+    return null;
+  }
+
+  return {
+    id: job.id,
+    source: job.source,
+    title: job.title,
+    company: job.company,
+    city: job.city,
+    province: job.province,
+    salaryMin: job.salaryMin ?? 0,
+    salaryMax: job.salaryMax ?? 0,
+    salaryText: job.salaryText ?? "",
+    educationRequirement: job.educationRequirement as Job["educationRequirement"],
+    experienceRequirement: job.experienceRequirement ?? 0,
+    description: job.description,
+    applyUrl: job.applyUrl,
+    publishedAt: job.publishedAt?.toISOString() ?? "",
+  };
+}
+
 export default async function JobDetailPage({ params }: JobDetailPageProps) {
   const { id } = await params;
-  const job = await chinaMockProvider.getJobById(id);
+  const job = (await getDatabaseJob(id)) ?? (await chinaMockProvider.getJobById(id));
 
   if (!job) {
     return (
@@ -93,7 +154,8 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
         </section>
 
         <p className="mt-6 text-sm text-slate-500">
-          数据来源：国内示例数据 · 发布日期：{job.publishedAt}
+          数据来源：{formatSource(job.source)} · 发布日期：
+          {formatPublishedAt(job.publishedAt)}
         </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
