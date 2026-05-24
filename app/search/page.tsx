@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import type { JobMatch, UserProfile } from "@/lib/matching";
 import { educationLevels } from "@/lib/providers/types";
@@ -20,8 +20,50 @@ type SearchResponse = {
   jobs: JobMatch[];
 };
 
+type SearchHistoryItem = UserProfile & {
+  id: string;
+  source: string;
+  resultCount: number;
+  createdAt: string;
+};
+
+type SearchHistoryResponse = {
+  histories: SearchHistoryItem[];
+};
+
+type SaveSearchHistoryResponse = {
+  history: SearchHistoryItem;
+};
+
 function formatSalary(match: JobMatch) {
   return match.job.salaryText || `${match.job.salaryMin}-${match.job.salaryMax} 元/月`;
+}
+
+function formatSearchTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "时间未知";
+  }
+
+  return date.toLocaleString("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function toProfileFromHistory(history: SearchHistoryItem): UserProfile {
+  return {
+    educationLevel: history.educationLevel,
+    expectedSalaryMin: history.expectedSalaryMin,
+    expectedSalaryMax: history.expectedSalaryMax,
+    city: history.city,
+    keywords: history.keywords,
+    experienceYears: history.experienceYears,
+  };
 }
 
 export default function SearchPage() {
@@ -31,6 +73,46 @@ export default function SearchPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [dataSource, setDataSource] = useState("");
+  const [searchHistories, setSearchHistories] = useState<SearchHistoryItem[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [historyError, setHistoryError] = useState("");
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadSearchHistory() {
+      setHistoryError("");
+
+      try {
+        const response = await fetch("/api/search-history");
+
+        if (!response.ok) {
+          throw new Error("搜索记录加载失败");
+        }
+
+        const data = (await response.json()) as SearchHistoryResponse;
+
+        if (isActive) {
+          setSearchHistories(data.histories);
+        }
+      } catch {
+        if (isActive) {
+          setSearchHistories([]);
+          setHistoryError("搜索记录暂时不可用");
+        }
+      } finally {
+        if (isActive) {
+          setIsLoadingHistory(false);
+        }
+      }
+    }
+
+    void loadSearchHistory();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   function updateProfile<Field extends keyof UserProfile>(
     field: Field,
@@ -42,8 +124,47 @@ export default function SearchPage() {
     }));
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function saveSearchHistory(
+    searchProfile: UserProfile,
+    result: SearchResponse,
+  ) {
+    try {
+      const response = await fetch("/api/search-history", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...searchProfile,
+          source: result.source,
+          resultCount: result.jobs.length,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("搜索记录保存失败");
+      }
+
+      const data = (await response.json()) as SaveSearchHistoryResponse;
+
+      setSearchHistories((currentHistories) => [
+        data.history,
+        ...currentHistories
+          .filter((history) => history.id !== data.history.id)
+          .slice(0, 9),
+      ]);
+      setHistoryError("");
+    } catch {
+      setHistoryError("搜索记录保存失败，但职位匹配结果不受影响");
+    }
+  }
+
+  async function runSearch(
+    searchProfile: UserProfile,
+    options: { saveHistory?: boolean } = {},
+  ) {
+    const shouldSaveHistory = options.saveHistory ?? true;
+
     setIsSearching(true);
     setErrorMessage("");
 
@@ -53,7 +174,7 @@ export default function SearchPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(profile),
+        body: JSON.stringify(searchProfile),
       });
 
       if (!response.ok) {
@@ -65,6 +186,10 @@ export default function SearchPage() {
       setMatches(data.jobs);
       setDataSource(data.source);
       setHasSearched(true);
+
+      if (shouldSaveHistory) {
+        void saveSearchHistory(searchProfile, data);
+      }
     } catch (error) {
       setMatches([]);
       setDataSource("");
@@ -72,6 +197,36 @@ export default function SearchPage() {
       setHasSearched(true);
     } finally {
       setIsSearching(false);
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await runSearch(profile);
+  }
+
+  function handleHistoryClick(history: SearchHistoryItem) {
+    const nextProfile = toProfileFromHistory(history);
+
+    setProfile(nextProfile);
+    void runSearch(nextProfile, { saveHistory: false });
+  }
+
+  async function handleClearHistory() {
+    setHistoryError("");
+
+    try {
+      const response = await fetch("/api/search-history", {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("清空搜索记录失败");
+      }
+
+      setSearchHistories([]);
+    } catch {
+      setHistoryError("清空搜索记录失败，请稍后重试");
     }
   }
 
@@ -88,6 +243,74 @@ export default function SearchPage() {
           <p className="mt-3 text-sm font-medium text-teal-700">
             数据来源：国内示例数据
           </p>
+        </section>
+
+        <section className="mt-10 rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-950">最近搜索</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                点击任意记录可自动填充条件并重新匹配职位。
+              </p>
+            </div>
+            <button
+              className="inline-flex justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-4 focus:ring-red-600/10 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isLoadingHistory || searchHistories.length === 0}
+              onClick={handleClearHistory}
+              type="button"
+            >
+              清空搜索记录
+            </button>
+          </div>
+
+          {historyError ? (
+            <p className="mt-4 rounded-md bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
+              {historyError}
+            </p>
+          ) : null}
+
+          <div className="mt-5">
+            {isLoadingHistory ? (
+              <div className="rounded-md bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                正在加载搜索记录...
+              </div>
+            ) : searchHistories.length > 0 ? (
+              <div className="grid gap-3 lg:grid-cols-2">
+                {searchHistories.map((history) => (
+                  <button
+                    className="rounded-md border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-teal-200 hover:bg-teal-50 focus:outline-none focus:ring-4 focus:ring-teal-600/15"
+                    key={history.id}
+                    onClick={() => handleHistoryClick(history)}
+                    type="button"
+                  >
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-base font-bold text-slate-950">
+                          {history.city || "不限城市"} ·{" "}
+                          {history.keywords || "不限岗位"}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          {history.educationLevel} ·{" "}
+                          {history.expectedSalaryMin}-
+                          {history.expectedSalaryMax} 元/月 ·{" "}
+                          {history.experienceYears === 0
+                            ? "经验不限"
+                            : `${history.experienceYears} 年经验`}
+                        </p>
+                      </div>
+                      <span className="text-xs font-medium text-slate-500">
+                        {formatSearchTime(history.createdAt)}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-md bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                暂无搜索记录
+              </div>
+            )}
+          </div>
         </section>
 
         <section className="mt-10 rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
