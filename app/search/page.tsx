@@ -1,7 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { calculateJobMatches, type JobMatch, type UserProfile } from "@/lib/matching";
+import {
+  calculateJobMatches,
+  type JobMatch,
+  type UserProfile,
+} from "@/lib/matching";
 import { educationLevels } from "@/lib/mockJobs";
 import { mockJobs } from "@/lib/mockJobs";
 
@@ -225,14 +230,22 @@ export default function SearchPage() {
                       </ul>
                     </div>
 
-                    <a
-                      className="mt-6 inline-flex rounded-md bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-950/20"
-                      href={job.applyUrl}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      申请链接
-                    </a>
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                      <Link
+                        className="inline-flex justify-center rounded-md bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
+                        href={`/jobs/${job.id}`}
+                      >
+                        查看详情
+                      </Link>
+                      <a
+                        className="inline-flex justify-center rounded-md bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-950/20"
+                        href={job.applyUrl}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        申请链接
+                      </a>
+                    </div>
                   </article>
                 ))}
               </div>
