@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Job {
+  id                    String        @id @default(cuid())
+  source                String
+  sourceJobId           String?       @map("source_job_id")
+  title                 String
+  company               String
+  city                  String
+  province              String
+  salaryMin             Int?          @map("salary_min")
+  salaryMax             Int?          @map("salary_max")
+  salaryText            String?       @map("salary_text")
+  educationRequirement  String        @map("education_requirement")
+  experienceRequirement Int?          @map("experience_requirement")
+  description           String        @db.Text
+  applyUrl              String        @map("apply_url") @db.Text
+  publishedAt           DateTime?     @map("published_at")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+  favorites             FavoriteJob[]
+
+  @@unique([source, sourceJobId])
+  @@index([source])
+  @@index([province, city])
+  @@index([city])
+  @@index([publishedAt])
+  @@map("jobs")
+}
+
+model FavoriteJob {
+  id        String   @id @default(cuid())
+  visitorId String   @map("visitor_id")
+  jobId     String   @map("job_id")
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([visitorId, jobId])
+  @@index([visitorId])
+  @@index([jobId])
+  @@map("favorite_jobs")
+}
+
+model SearchHistory {
+  id                String   @id @default(cuid())
+  visitorId         String?  @map("visitor_id")
+  educationLevel    String?  @map("education_level")
+  expectedSalaryMin Int?     @map("expected_salary_min")
+  expectedSalaryMax Int?     @map("expected_salary_max")
+  city              String?
+  keywords          String?
+  experienceYears   Int?     @map("experience_years")
+  source            String?
+  resultCount       Int      @default(0) @map("result_count")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([visitorId])
+  @@index([city])
+  @@index([createdAt])
+  @@map("search_histories")
+}
