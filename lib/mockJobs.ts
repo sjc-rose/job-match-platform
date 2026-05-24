@@ -17,7 +17,7 @@ export type Job = {
 
 export const mockJobs: Job[] = [
   {
-    id: "job-001",
+    id: "1",
     title: "前端开发工程师",
     company: "星河科技",
     city: "上海",
@@ -29,7 +29,7 @@ export const mockJobs: Job[] = [
     applyUrl: "https://example.com/jobs/frontend-shanghai",
   },
   {
-    id: "job-002",
+    id: "2",
     title: "后端开发工程师",
     company: "云启数据",
     city: "北京",
@@ -41,7 +41,7 @@ export const mockJobs: Job[] = [
     applyUrl: "https://example.com/jobs/backend-beijing",
   },
   {
-    id: "job-003",
+    id: "3",
     title: "数据分析师",
     company: "数智未来",
     city: "杭州",
@@ -53,7 +53,7 @@ export const mockJobs: Job[] = [
     applyUrl: "https://example.com/jobs/data-hangzhou",
   },
   {
-    id: "job-004",
+    id: "4",
     title: "产品经理",
     company: "职达网络",
     city: "深圳",
@@ -65,7 +65,7 @@ export const mockJobs: Job[] = [
     applyUrl: "https://example.com/jobs/pm-shenzhen",
   },
   {
-    id: "job-005",
+    id: "5",
     title: "UI 设计师",
     company: "灵感设计",
     city: "广州",
@@ -77,7 +77,7 @@ export const mockJobs: Job[] = [
     applyUrl: "https://example.com/jobs/ui-guangzhou",
   },
   {
-    id: "job-006",
+    id: "6",
     title: "算法工程师",
     company: "深算智能",
     city: "上海",
@@ -89,7 +89,7 @@ export const mockJobs: Job[] = [
     applyUrl: "https://example.com/jobs/algorithm-shanghai",
   },
   {
-    id: "job-007",
+    id: "7",
     title: "运营专员",
     company: "启航人力",
     city: "成都",
@@ -101,7 +101,7 @@ export const mockJobs: Job[] = [
     applyUrl: "https://example.com/jobs/operation-chengdu",
   },
   {
-    id: "job-008",
+    id: "8",
     title: "测试工程师",
     company: "稳测科技",
     city: "南京",
