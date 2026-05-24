@@ -161,6 +161,12 @@ export default function AdminJobsPage() {
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
             按关键词和城市筛选数据库中的职位记录。
           </p>
+          <Link
+            className="mt-6 inline-flex justify-center rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
+            href="/admin/jobs/new"
+          >
+            新增职位
+          </Link>
         </section>
 
         <section className="mt-10 rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">

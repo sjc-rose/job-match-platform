@@ -36,6 +36,20 @@ function parsePositiveInteger(value: string | null, fallback: number) {
   return parsedValue;
 }
 
+function parseNonNegativeInteger(value: unknown, fallback = 0) {
+  const parsedValue = Number(value);
+
+  if (!Number.isInteger(parsedValue) || parsedValue < 0) {
+    return fallback;
+  }
+
+  return parsedValue;
+}
+
+function parseString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function toApiJob(job: JobRecord) {
   return {
     id: job.id,
@@ -138,6 +152,70 @@ export async function GET(request: Request) {
     console.error("Failed to fetch admin jobs", error);
     return NextResponse.json(
       { error: "Failed to fetch admin jobs" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const title = parseString(body.title);
+    const company = parseString(body.company);
+    const city = parseString(body.city);
+    const province = parseString(body.province);
+    const salaryMin = parseNonNegativeInteger(body.salaryMin);
+    const salaryMax = parseNonNegativeInteger(body.salaryMax);
+    const salaryText = parseString(body.salaryText);
+    const educationRequirement = parseString(body.educationRequirement);
+    const experienceRequirement = parseNonNegativeInteger(body.experienceRequirement);
+    const description = parseString(body.description);
+    const applyUrl = parseString(body.applyUrl);
+    const source = parseString(body.source) || "manual";
+
+    if (
+      !title ||
+      !company ||
+      !city ||
+      !province ||
+      !educationRequirement ||
+      !description ||
+      !applyUrl
+    ) {
+      return NextResponse.json(
+        { error: "Missing required job fields" },
+        { status: 400 },
+      );
+    }
+
+    const job = await prisma.job.create({
+      data: {
+        source,
+        title,
+        company,
+        city,
+        province,
+        salaryMin,
+        salaryMax,
+        salaryText,
+        educationRequirement,
+        experienceRequirement,
+        description,
+        applyUrl,
+        publishedAt: new Date(),
+      },
+    });
+
+    return NextResponse.json(
+      {
+        job: toApiJob(job),
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Failed to create admin job", error);
+    return NextResponse.json(
+      { error: "Failed to create admin job" },
       { status: 500 },
     );
   }
