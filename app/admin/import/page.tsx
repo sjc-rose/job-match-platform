@@ -13,6 +13,25 @@ type ImportResult = {
   }>;
 };
 
+type ImportMode = "json" | "csv";
+
+const csvHeaders = [
+  "title",
+  "company",
+  "city",
+  "province",
+  "salaryMin",
+  "salaryMax",
+  "salaryText",
+  "educationRequirement",
+  "experienceRequirement",
+  "description",
+  "applyUrl",
+  "source",
+  "sourceJobId",
+  "publishedAt",
+] as const;
+
 const jsonExample = [
   {
     title: "前端开发工程师",
@@ -49,9 +68,94 @@ const jsonExample = [
 ];
 
 const exampleText = JSON.stringify(jsonExample, null, 2);
+const csvExample = `${csvHeaders.join(",")}
+前端开发工程师,示例科技有限公司,上海,上海,15000,25000,15k-25k 元/月,本科,3,负责招聘平台前端页面和组件开发。,https://example.com/jobs/frontend,manual-import,frontend-001,2026-05-25
+数据分析师,示例数据服务有限公司,杭州,浙江,12000,22000,12k-22k 元/月,本科,1,负责招聘数据分析、指标看板和业务洞察。,https://example.com/jobs/data-analyst,manual-import,data-001,2026-05-25`;
+
+function parseCsvRows(csvText: string) {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentCell = "";
+  let isInQuotes = false;
+
+  for (let index = 0; index < csvText.length; index += 1) {
+    const char = csvText[index];
+    const nextChar = csvText[index + 1];
+
+    if (char === '"' && isInQuotes && nextChar === '"') {
+      currentCell += '"';
+      index += 1;
+      continue;
+    }
+
+    if (char === '"') {
+      isInQuotes = !isInQuotes;
+      continue;
+    }
+
+    if (char === "," && !isInQuotes) {
+      currentRow.push(currentCell.trim());
+      currentCell = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !isInQuotes) {
+      if (char === "\r" && nextChar === "\n") {
+        index += 1;
+      }
+
+      currentRow.push(currentCell.trim());
+
+      if (currentRow.some((cell) => cell !== "")) {
+        rows.push(currentRow);
+      }
+
+      currentRow = [];
+      currentCell = "";
+      continue;
+    }
+
+    currentCell += char;
+  }
+
+  currentRow.push(currentCell.trim());
+
+  if (currentRow.some((cell) => cell !== "")) {
+    rows.push(currentRow);
+  }
+
+  if (isInQuotes) {
+    throw new Error("CSV 引号未闭合");
+  }
+
+  return rows;
+}
+
+function parseCsvJobs(csvText: string) {
+  const rows = parseCsvRows(csvText);
+  const [headerRow, ...dataRows] = rows;
+
+  if (!headerRow || headerRow.length === 0) {
+    throw new Error("CSV 第一行必须是表头");
+  }
+
+  return dataRows.map((row) =>
+    headerRow.reduce<Record<string, string>>((job, header, index) => {
+      const fieldName = header.trim();
+
+      if (fieldName) {
+        job[fieldName] = row[index] ?? "";
+      }
+
+      return job;
+    }, {}),
+  );
+}
 
 export default function AdminImportPage() {
+  const [importMode, setImportMode] = useState<ImportMode>("json");
   const [jsonText, setJsonText] = useState(exampleText);
+  const [csvText, setCsvText] = useState(csvExample);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -63,10 +167,15 @@ export default function AdminImportPage() {
     setResult(null);
 
     try {
-      const parsedJobs = JSON.parse(jsonText) as unknown;
+      const parsedJobs =
+        importMode === "json"
+          ? (JSON.parse(jsonText) as unknown)
+          : parseCsvJobs(csvText);
 
       if (!Array.isArray(parsedJobs)) {
-        throw new Error("请粘贴 JSON 职位数组");
+        throw new Error(
+          importMode === "json" ? "请粘贴 JSON 职位数组" : "请粘贴 CSV 职位数据",
+        );
       }
 
       const response = await fetch("/api/admin/import", {
@@ -78,7 +187,7 @@ export default function AdminImportPage() {
       });
 
       if (!response.ok) {
-        throw new Error("导入失败，请检查 JSON 内容后重试");
+        throw new Error("导入失败，请检查内容后重试");
       }
 
       const importResult = (await response.json()) as ImportResult;
@@ -109,21 +218,58 @@ export default function AdminImportPage() {
             导入职位
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-            粘贴 JSON 职位数组，批量创建或更新数据库中的职位记录。
+            粘贴 JSON 职位数组或 CSV 文本，批量创建或更新数据库中的职位记录。
           </p>
         </section>
 
         <section className="mt-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
             <form onSubmit={handleSubmit}>
+              <div className="mb-5 inline-flex rounded-md border border-slate-200 bg-slate-50 p-1">
+                <button
+                  className={`rounded px-4 py-2 text-sm font-semibold transition ${
+                    importMode === "json"
+                      ? "bg-white text-teal-700 shadow-sm"
+                      : "text-slate-600 hover:text-slate-950"
+                  }`}
+                  onClick={() => {
+                    setImportMode("json");
+                    setResult(null);
+                    setErrorMessage("");
+                  }}
+                  type="button"
+                >
+                  JSON
+                </button>
+                <button
+                  className={`rounded px-4 py-2 text-sm font-semibold transition ${
+                    importMode === "csv"
+                      ? "bg-white text-teal-700 shadow-sm"
+                      : "text-slate-600 hover:text-slate-950"
+                  }`}
+                  onClick={() => {
+                    setImportMode("csv");
+                    setResult(null);
+                    setErrorMessage("");
+                  }}
+                  type="button"
+                >
+                  CSV
+                </button>
+              </div>
+
               <label className="block">
                 <span className="text-sm font-medium text-slate-700">
-                  JSON 职位数组
+                  {importMode === "json" ? "JSON 职位数组" : "CSV 职位数据"}
                 </span>
                 <textarea
                   className="mt-2 min-h-[520px] w-full rounded-md border border-slate-300 bg-white px-3 py-3 font-mono text-sm text-slate-950 outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/15"
-                  onChange={(event) => setJsonText(event.target.value)}
-                  value={jsonText}
+                  onChange={(event) =>
+                    importMode === "json"
+                      ? setJsonText(event.target.value)
+                      : setCsvText(event.target.value)
+                  }
+                  value={importMode === "json" ? jsonText : csvText}
                 />
               </label>
 
@@ -144,7 +290,12 @@ export default function AdminImportPage() {
                 <button
                   className="inline-flex justify-center rounded-md border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-950/10"
                   onClick={() => {
-                    setJsonText(exampleText);
+                    if (importMode === "json") {
+                      setJsonText(exampleText);
+                    } else {
+                      setCsvText(csvExample);
+                    }
+
                     setResult(null);
                     setErrorMessage("");
                   }}
@@ -158,9 +309,11 @@ export default function AdminImportPage() {
 
           <aside className="space-y-6">
             <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60">
-              <h2 className="text-xl font-bold text-slate-950">JSON 示例</h2>
+              <h2 className="text-xl font-bold text-slate-950">
+                {importMode === "json" ? "JSON 示例" : "CSV 示例"}
+              </h2>
               <pre className="mt-4 max-h-[360px] overflow-auto rounded-md bg-slate-950 p-4 text-xs leading-5 text-slate-100">
-                {exampleText}
+                {importMode === "json" ? exampleText : csvExample}
               </pre>
             </section>
 
