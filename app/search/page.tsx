@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import type { JobMatch, UserProfile } from "@/lib/matching";
 import { educationLevels } from "@/lib/providers/types";
 
@@ -275,6 +276,11 @@ export default function SearchPage() {
                     </div>
 
                     <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                      <FavoriteButton
+                        activeLabel="取消收藏"
+                        inactiveLabel="收藏"
+                        jobId={job.id}
+                      />
                       <Link
                         className="inline-flex justify-center rounded-md bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
                         href={`/jobs/${job.id}`}

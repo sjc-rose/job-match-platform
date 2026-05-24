@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import { chinaMockProvider } from "@/lib/providers/chinaMockProvider";
 
 type JobDetailPageProps = {
@@ -96,6 +97,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
         </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <FavoriteButton jobId={job.id} />
           <a
             className="inline-flex justify-center rounded-md bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-950/20"
             href={job.applyUrl}
