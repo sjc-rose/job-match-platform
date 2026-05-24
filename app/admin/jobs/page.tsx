@@ -322,6 +322,12 @@ export default function AdminJobsPage() {
                           >
                             查看详情
                           </Link>
+                          <Link
+                            className="font-semibold text-slate-700 transition hover:text-slate-950"
+                            href={`/admin/jobs/${job.id}/edit`}
+                          >
+                            编辑
+                          </Link>
                           <button
                             className="font-semibold text-red-600 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                             disabled={deletingJobId === job.id}
