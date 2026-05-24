@@ -36,7 +36,32 @@ http://localhost:3000
 npm run dev
 npm run build
 npm run lint
+npm run prisma:validate
+npm run prisma:generate
 ```
+
+## 数据库
+
+项目已加入 Prisma 和 PostgreSQL schema，后续可连接 Supabase PostgreSQL。
+
+本地配置步骤：
+
+1. 复制 `.env.example` 为 `.env.local`
+2. 在 `.env.local` 中填写 `DATABASE_URL`
+3. 验证 Prisma schema：
+
+```bash
+npm run prisma:validate
+```
+
+4. 连接数据库后，可按需生成 Prisma Client 或推送 schema：
+
+```bash
+npm run prisma:generate
+npm run db:push
+```
+
+当前版本只完成数据库基础架构，现有收藏职位功能仍使用浏览器 `localStorage`，没有接真实招聘 API、数据库读写或用户登录。
 
 ## 说明
 
