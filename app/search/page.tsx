@@ -39,6 +39,18 @@ function formatSalary(match: JobMatch) {
   return match.job.salaryText || `${match.job.salaryMin}-${match.job.salaryMax} 元/月`;
 }
 
+function getSourceLabel(source: string) {
+  if (["manual", "manual-import", "database"].includes(source)) {
+    return "数据库职位";
+  }
+
+  if (source === "china-mock") {
+    return "示例职位";
+  }
+
+  return `来源：${source}`;
+}
+
 function formatSearchTime(value: string) {
   const date = new Date(value);
 
@@ -443,6 +455,9 @@ export default function SearchPage() {
                         <h2 className="text-2xl font-bold text-slate-950">
                           {job.title}
                         </h2>
+                        <span className="mt-3 inline-flex rounded-md bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                          {getSourceLabel(job.source)}
+                        </span>
                         <p className="mt-2 text-sm font-medium text-slate-500">
                           {job.company}
                         </p>
