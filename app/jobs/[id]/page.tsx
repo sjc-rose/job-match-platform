@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { mockJobs } from "@/lib/mockJobs";
+import { chinaMockProvider } from "@/lib/providers/chinaMockProvider";
 
 type JobDetailPageProps = {
   params: Promise<{
@@ -11,9 +11,13 @@ function formatSalary(min: number, max: number) {
   return `${Math.round(min / 1000)}k-${Math.round(max / 1000)}k`;
 }
 
+function formatLocation(province: string, city: string) {
+  return province === city ? city : `${province} · ${city}`;
+}
+
 export default async function JobDetailPage({ params }: JobDetailPageProps) {
   const { id } = await params;
-  const job = mockJobs.find((item) => item.id === id);
+  const job = await chinaMockProvider.getJobById(id);
 
   if (!job) {
     return (
@@ -21,7 +25,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
         <section className="w-full max-w-xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-xl shadow-slate-200/70">
           <h1 className="text-3xl font-bold tracking-tight">职位不存在</h1>
           <p className="mt-4 text-sm leading-6 text-slate-600">
-            这个职位可能已下线，或当前 mock 数据中没有对应记录。
+            这个职位可能已下线，或当前国内示例数据中没有对应记录。
           </p>
           <Link
             className="mt-8 inline-flex rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
@@ -47,7 +51,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
             </p>
           </div>
           <div className="rounded-md bg-teal-50 px-4 py-3 text-sm font-bold text-teal-700">
-            {formatSalary(job.salaryMin, job.salaryMax)}
+            {job.salaryText || formatSalary(job.salaryMin, job.salaryMax)}
           </div>
         </div>
 
@@ -55,13 +59,13 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
           <div className="rounded-md bg-slate-50 px-4 py-4">
             <dt className="text-sm text-slate-500">城市</dt>
             <dd className="mt-1 text-base font-semibold text-slate-900">
-              {job.city}
+              {formatLocation(job.province, job.city)}
             </dd>
           </div>
           <div className="rounded-md bg-slate-50 px-4 py-4">
             <dt className="text-sm text-slate-500">薪资范围</dt>
             <dd className="mt-1 text-base font-semibold text-slate-900">
-              {formatSalary(job.salaryMin, job.salaryMax)}
+              {job.salaryText || formatSalary(job.salaryMin, job.salaryMax)}
             </dd>
           </div>
           <div className="rounded-md bg-slate-50 px-4 py-4">
@@ -73,7 +77,9 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
           <div className="rounded-md bg-slate-50 px-4 py-4">
             <dt className="text-sm text-slate-500">工作经验要求</dt>
             <dd className="mt-1 text-base font-semibold text-slate-900">
-              {job.experienceRequirement} 年以上
+              {job.experienceRequirement === 0
+                ? "经验不限"
+                : `${job.experienceRequirement} 年以上`}
             </dd>
           </div>
         </dl>
@@ -84,6 +90,10 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
             {job.description}
           </p>
         </section>
+
+        <p className="mt-6 text-sm text-slate-500">
+          数据来源：国内示例数据 · 发布日期：{job.publishedAt}
+        </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <a

@@ -1,14 +1,7 @@
-import type { EducationLevel, Job } from "./mockJobs";
-import { educationLevels } from "./mockJobs";
+import type { EducationLevel, Job, SearchJobsParams } from "./providers/types";
+import { educationLevels } from "./providers/types";
 
-export type UserProfile = {
-  educationLevel: EducationLevel;
-  expectedSalaryMin: number;
-  expectedSalaryMax: number;
-  city: string;
-  keywords: string;
-  experienceYears: number;
-};
+export type UserProfile = SearchJobsParams;
 
 export type JobMatch = {
   job: Job;
@@ -40,10 +33,7 @@ function calculateKeywordScore(profile: UserProfile, job: Job) {
 
   return {
     score,
-    reason:
-      matchedKeywords.length > 0
-        ? `关键词匹配：${matchedKeywords.join("、")}`
-        : "",
+    reason: matchedKeywords.length > 0 ? "岗位关键词匹配" : "",
   };
 }
 
@@ -55,7 +45,7 @@ function calculateCityScore(profile: UserProfile, job: Job) {
   }
 
   if (job.city === preferredCity) {
-    return { score: 20, reason: `城市匹配：${job.city}` };
+    return { score: 20, reason: "城市符合期望" };
   }
 
   return { score: 0, reason: "" };
@@ -68,11 +58,11 @@ function calculateSalaryScore(profile: UserProfile, job: Job) {
   const overlapMax = Math.min(expectedMax, job.salaryMax);
 
   if (overlapMax >= overlapMin) {
-    return { score: 25, reason: "薪资范围与期望重叠" };
+    return { score: 25, reason: "薪资范围符合期望" };
   }
 
   if (job.salaryMin > expectedMax) {
-    return { score: 20, reason: "职位薪资整体高于期望范围" };
+    return { score: 20, reason: "薪资范围符合期望" };
   }
 
   const gap = expectedMin - job.salaryMax;
@@ -81,7 +71,7 @@ function calculateSalaryScore(profile: UserProfile, job: Job) {
 
   return {
     score,
-    reason: score > 0 ? "职位薪资接近期望范围" : "",
+    reason: score > 0 ? "薪资范围接近期望" : "",
   };
 }
 
@@ -90,7 +80,7 @@ function calculateEducationScore(profile: UserProfile, job: Job) {
   const jobRank = educationRank.get(job.educationRequirement) ?? 0;
 
   if (userRank >= jobRank) {
-    return { score: 15, reason: `学历满足要求：${job.educationRequirement}及以上` };
+    return { score: 15, reason: "学历要求满足" };
   }
 
   if (jobRank - userRank === 1) {
@@ -104,7 +94,7 @@ function calculateExperienceScore(profile: UserProfile, job: Job) {
   if (profile.experienceYears >= job.experienceRequirement) {
     return {
       score: 10,
-      reason: `经验满足要求：${job.experienceRequirement}年以上`,
+      reason: "经验要求满足",
     };
   }
 

@@ -2,31 +2,34 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import {
-  calculateJobMatches,
-  type JobMatch,
-  type UserProfile,
-} from "@/lib/matching";
-import { educationLevels } from "@/lib/mockJobs";
-import { mockJobs } from "@/lib/mockJobs";
+import type { JobMatch, UserProfile } from "@/lib/matching";
+import { educationLevels } from "@/lib/providers/types";
 
 const initialProfile: UserProfile = {
   educationLevel: "本科",
   expectedSalaryMin: 15000,
   expectedSalaryMax: 25000,
   city: "上海",
-  keywords: "前端 React",
+  keywords: "前端开发",
   experienceYears: 2,
 };
 
-function formatSalary(min: number, max: number) {
-  return `${Math.round(min / 1000)}k-${Math.round(max / 1000)}k`;
+type SearchResponse = {
+  source: "china-mock";
+  jobs: JobMatch[];
+};
+
+function formatSalary(match: JobMatch) {
+  return match.job.salaryText || `${match.job.salaryMin}-${match.job.salaryMax} 元/月`;
 }
 
 export default function SearchPage() {
   const [profile, setProfile] = useState<UserProfile>(initialProfile);
   const [matches, setMatches] = useState<JobMatch[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [dataSource, setDataSource] = useState("");
 
   function updateProfile<Field extends keyof UserProfile>(
     field: Field,
@@ -38,14 +41,37 @@ export default function SearchPage() {
     }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const results = calculateJobMatches(profile, mockJobs).filter(
-      (result) => result.matchScore > 0,
-    );
+    setIsSearching(true);
+    setErrorMessage("");
 
-    setMatches(results);
-    setHasSearched(true);
+    try {
+      const response = await fetch("/api/jobs/search", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(profile),
+      });
+
+      if (!response.ok) {
+        throw new Error("职位搜索失败，请稍后重试");
+      }
+
+      const data = (await response.json()) as SearchResponse;
+
+      setMatches(data.jobs);
+      setDataSource(data.source);
+      setHasSearched(true);
+    } catch (error) {
+      setMatches([]);
+      setDataSource("");
+      setErrorMessage(error instanceof Error ? error.message : "职位搜索失败");
+      setHasSearched(true);
+    } finally {
+      setIsSearching(false);
+    }
   }
 
   return (
@@ -57,6 +83,9 @@ export default function SearchPage() {
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
             输入你的求职偏好，系统会根据关键词、城市、薪资、学历和经验进行职位匹配。
+          </p>
+          <p className="mt-3 text-sm font-medium text-teal-700">
+            数据来源：国内示例数据
           </p>
         </section>
 
@@ -87,7 +116,7 @@ export default function SearchPage() {
 
             <label className="block">
               <span className="text-sm font-medium text-slate-700">
-                期望最低薪资
+                期望最低薪资（元/月）
               </span>
               <input
                 className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/15"
@@ -102,7 +131,7 @@ export default function SearchPage() {
 
             <label className="block">
               <span className="text-sm font-medium text-slate-700">
-                期望最高薪资
+                期望最高薪资（元/月）
               </span>
               <input
                 className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/15"
@@ -155,9 +184,10 @@ export default function SearchPage() {
             <div className="md:col-span-2 lg:col-span-3">
               <button
                 className="w-full rounded-md bg-teal-600 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20 sm:w-auto"
+                disabled={isSearching}
                 type="submit"
               >
-                开始匹配职位
+                {isSearching ? "正在匹配..." : "开始匹配职位"}
               </button>
             </div>
           </form>
@@ -165,9 +195,21 @@ export default function SearchPage() {
 
         {hasSearched ? (
           <section className="mt-10">
-            {matches.length > 0 ? (
+            {dataSource ? (
+              <p className="mb-4 text-sm font-medium text-slate-500">
+                数据来源：国内示例数据
+              </p>
+            ) : null}
+            {errorMessage ? (
+              <div className="rounded-lg border border-red-200 bg-white p-8 text-center text-red-600 shadow-lg shadow-slate-200/60">
+                {errorMessage}
+              </div>
+            ) : matches.length > 0 ? (
               <div className="grid gap-5 lg:grid-cols-2">
-                {matches.map(({ job, matchScore, matchReasons }) => (
+                {matches.map((match) => {
+                  const { job, matchScore, matchReasons } = match;
+
+                  return (
                   <article
                     className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60"
                     key={job.id}
@@ -196,7 +238,7 @@ export default function SearchPage() {
                       <div className="rounded-md bg-slate-50 px-4 py-3">
                         <dt className="text-slate-500">薪资范围</dt>
                         <dd className="mt-1 font-semibold text-slate-900">
-                          {formatSalary(job.salaryMin, job.salaryMax)}
+                          {formatSalary(match)}
                         </dd>
                       </div>
                       <div className="rounded-md bg-slate-50 px-4 py-3">
@@ -208,7 +250,9 @@ export default function SearchPage() {
                       <div className="rounded-md bg-slate-50 px-4 py-3">
                         <dt className="text-slate-500">经验要求</dt>
                         <dd className="mt-1 font-semibold text-slate-900">
-                          {job.experienceRequirement} 年以上
+                          {job.experienceRequirement === 0
+                            ? "经验不限"
+                            : `${job.experienceRequirement} 年以上`}
                         </dd>
                       </div>
                     </dl>
@@ -247,7 +291,8 @@ export default function SearchPage() {
                       </a>
                     </div>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-600 shadow-lg shadow-slate-200/60">
