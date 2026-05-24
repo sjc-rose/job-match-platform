@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Job } from "@/lib/providers/types";
 
@@ -71,6 +72,7 @@ function formatSalary(min: number, max: number) {
 }
 
 export default function AdminPage() {
+  const router = useRouter();
   const [data, setData] = useState<AdminStatsResponse>(emptyStats);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -130,9 +132,27 @@ export default function AdminPage() {
     },
   ];
 
+  async function handleLogout() {
+    await fetch("/api/admin/logout", {
+      method: "POST",
+    });
+    router.push("/admin/login");
+    router.refresh();
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950 sm:px-10">
       <div className="mx-auto max-w-6xl">
+        <div className="mb-8 flex justify-end">
+          <button
+            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-4 focus:ring-red-600/10"
+            onClick={handleLogout}
+            type="button"
+          >
+            退出登录
+          </button>
+        </div>
+
         <section className="text-center">
           <p className="mx-auto inline-flex rounded-md bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700">
             仅开发测试使用
