@@ -70,6 +70,8 @@ export default function AdminJobsPage() {
   const [data, setData] = useState<AdminJobsResponse>(emptyJobsResponse);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [refreshToken, setRefreshToken] = useState(0);
+  const [deletingJobId, setDeletingJobId] = useState("");
 
   useEffect(() => {
     let isActive = true;
@@ -122,7 +124,7 @@ export default function AdminJobsPage() {
     return () => {
       isActive = false;
     };
-  }, [city, keyword, page]);
+  }, [city, keyword, page, refreshToken]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -137,6 +139,41 @@ export default function AdminJobsPage() {
     setKeyword("");
     setCity("");
     setPage(1);
+  }
+
+  async function handleDeleteJob(job: AdminJob) {
+    const confirmed = window.confirm(
+      `确认删除职位“${job.title}”？关联收藏记录会一并删除。`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingJobId(job.id);
+    setErrorMessage("");
+
+    try {
+      const response = await fetch(`/api/admin/jobs/${job.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("删除职位失败，请稍后重试");
+      }
+
+      if (data.jobs.length === 1 && page > 1) {
+        setPage((currentPage) => Math.max(1, currentPage - 1));
+      } else {
+        setRefreshToken((currentToken) => currentToken + 1);
+      }
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "删除职位失败，请稍后重试",
+      );
+    } finally {
+      setDeletingJobId("");
+    }
   }
 
   const canGoPrevious = data.page > 1;
@@ -278,12 +315,22 @@ export default function AdminJobsPage() {
                         {formatDate(job.publishedAt)}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4">
-                        <Link
-                          className="font-semibold text-teal-700 transition hover:text-teal-800"
-                          href={`/jobs/${job.id}`}
-                        >
-                          查看详情
-                        </Link>
+                        <div className="flex items-center gap-3">
+                          <Link
+                            className="font-semibold text-teal-700 transition hover:text-teal-800"
+                            href={`/jobs/${job.id}`}
+                          >
+                            查看详情
+                          </Link>
+                          <button
+                            className="font-semibold text-red-600 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={deletingJobId === job.id}
+                            onClick={() => handleDeleteJob(job)}
+                            type="button"
+                          >
+                            {deletingJobId === job.id ? "删除中..." : "删除"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
