@@ -239,3 +239,41 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const jobIds = Array.isArray(body.jobIds)
+      ? body.jobIds.filter((jobId): jobId is string => typeof jobId === "string")
+      : [];
+    const uniqueJobIds = [...new Set(jobIds.map((jobId) => jobId.trim()))].filter(
+      Boolean,
+    );
+
+    if (uniqueJobIds.length === 0) {
+      return NextResponse.json(
+        { error: "jobIds must include at least one job id" },
+        { status: 400 },
+      );
+    }
+
+    const result = await prisma.job.deleteMany({
+      where: {
+        id: {
+          in: uniqueJobIds,
+        },
+      },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      deletedCount: result.count,
+    });
+  } catch (error) {
+    console.error("Failed to bulk delete admin jobs", error);
+    return NextResponse.json(
+      { error: "Failed to bulk delete admin jobs" },
+      { status: 500 },
+    );
+  }
+}

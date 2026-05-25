@@ -83,6 +83,8 @@ export default function AdminJobsPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [refreshToken, setRefreshToken] = useState(0);
   const [deletingJobId, setDeletingJobId] = useState("");
+  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -119,6 +121,11 @@ export default function AdminJobsPage() {
 
         if (isActive) {
           setData(jobsData);
+          setSelectedJobIds((currentSelectedJobIds) =>
+            currentSelectedJobIds.filter((jobId) =>
+              jobsData.jobs.some((job) => job.id === jobId),
+            ),
+          );
         }
       } catch (error) {
         if (isActive) {
@@ -175,8 +182,37 @@ export default function AdminJobsPage() {
 
   function handleSourceChange(nextSource: string) {
     setSource(nextSource);
+    setSelectedJobIds([]);
     setPage(1);
     updateSourceQuery(nextSource);
+  }
+
+  function toggleJobSelection(jobId: string) {
+    setSelectedJobIds((currentSelectedJobIds) =>
+      currentSelectedJobIds.includes(jobId)
+        ? currentSelectedJobIds.filter((selectedJobId) => selectedJobId !== jobId)
+        : [...currentSelectedJobIds, jobId],
+    );
+  }
+
+  function toggleCurrentPageSelection() {
+    const currentPageJobIds = data.jobs.map((job) => job.id);
+    const isEveryCurrentPageJobSelected =
+      currentPageJobIds.length > 0 &&
+      currentPageJobIds.every((jobId) => selectedJobIds.includes(jobId));
+
+    if (isEveryCurrentPageJobSelected) {
+      setSelectedJobIds((currentSelectedJobIds) =>
+        currentSelectedJobIds.filter(
+          (jobId) => !currentPageJobIds.includes(jobId),
+        ),
+      );
+      return;
+    }
+
+    setSelectedJobIds((currentSelectedJobIds) => [
+      ...new Set([...currentSelectedJobIds, ...currentPageJobIds]),
+    ]);
   }
 
   async function handleDeleteJob(job: AdminJob) {
@@ -214,8 +250,58 @@ export default function AdminJobsPage() {
     }
   }
 
+  async function handleBulkDeleteJobs() {
+    if (selectedJobIds.length === 0) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `确认删除选中的 ${selectedJobIds.length} 个职位？关联收藏记录会一并删除。`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsBulkDeleting(true);
+    setErrorMessage("");
+
+    try {
+      const response = await fetch("/api/admin/jobs", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jobIds: selectedJobIds,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("批量删除职位失败，请稍后重试");
+      }
+
+      setSelectedJobIds([]);
+
+      if (selectedJobIds.length >= data.jobs.length && page > 1) {
+        setPage((currentPage) => Math.max(1, currentPage - 1));
+      } else {
+        setRefreshToken((currentToken) => currentToken + 1);
+      }
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "批量删除职位失败，请稍后重试",
+      );
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  }
+
   const canGoPrevious = data.page > 1;
   const canGoNext = data.page < data.totalPages;
+  const isEveryCurrentPageJobSelected =
+    data.jobs.length > 0 &&
+    data.jobs.every((job) => selectedJobIds.includes(job.id));
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950 sm:px-10">
@@ -317,6 +403,18 @@ export default function AdminJobsPage() {
                   : `共 ${data.total} 条记录，第 ${data.page} / ${data.totalPages} 页`}
               </p>
             </div>
+            <button
+              className="inline-flex justify-center rounded-md bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-600/20 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={selectedJobIds.length === 0 || isBulkDeleting}
+              onClick={handleBulkDeleteJobs}
+              type="button"
+            >
+              {isBulkDeleting
+                ? "正在删除..."
+                : `批量删除选中职位${
+                    selectedJobIds.length > 0 ? `（${selectedJobIds.length}）` : ""
+                  }`}
+            </button>
           </div>
 
           {errorMessage ? (
@@ -331,6 +429,16 @@ export default function AdminJobsPage() {
             <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
+                  <th className="px-6 py-4 font-semibold">
+                    <input
+                      aria-label="选择当前页全部职位"
+                      checked={isEveryCurrentPageJobSelected}
+                      className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-600"
+                      disabled={isLoading || data.jobs.length === 0}
+                      onChange={toggleCurrentPageSelection}
+                      type="checkbox"
+                    />
+                  </th>
                   <th className="px-6 py-4 font-semibold">职位标题</th>
                   <th className="px-6 py-4 font-semibold">公司</th>
                   <th className="px-6 py-4 font-semibold">城市</th>
@@ -344,13 +452,22 @@ export default function AdminJobsPage() {
               <tbody className="divide-y divide-slate-200 bg-white">
                 {isLoading ? (
                   <tr>
-                    <td className="px-6 py-8 text-center text-slate-500" colSpan={8}>
+                    <td className="px-6 py-8 text-center text-slate-500" colSpan={9}>
                       正在加载职位...
                     </td>
                   </tr>
                 ) : data.jobs.length > 0 ? (
                   data.jobs.map((job) => (
                     <tr className="transition hover:bg-slate-50" key={job.id}>
+                      <td className="px-6 py-4">
+                        <input
+                          aria-label={`选择职位 ${job.title}`}
+                          checked={selectedJobIds.includes(job.id)}
+                          className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-600"
+                          onChange={() => toggleJobSelection(job.id)}
+                          type="checkbox"
+                        />
+                      </td>
                       <td className="max-w-xs px-6 py-4 font-semibold text-slate-950">
                         {job.title}
                       </td>
@@ -398,7 +515,7 @@ export default function AdminJobsPage() {
                   ))
                 ) : (
                   <tr>
-                    <td className="px-6 py-8 text-center text-slate-500" colSpan={8}>
+                    <td className="px-6 py-8 text-center text-slate-500" colSpan={9}>
                       暂无职位记录
                     </td>
                   </tr>
