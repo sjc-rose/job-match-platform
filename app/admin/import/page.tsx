@@ -2,19 +2,26 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import { createJobDedupKey, isInvalidImportJob } from "@/lib/importDedup";
 
 type ImportResult = {
-  importedCount: number;
-  updatedCount: number;
-  failedCount: number;
-  errors: Array<{
+  total: number;
+  imported: number;
+  skippedDuplicates: number;
+  skippedInvalid: number;
+  errors: number;
+  errorDetails: Array<{
     index: number;
     message: string;
   }>;
+  importedCount?: number;
+  updatedCount?: number;
+  failedCount?: number;
 };
 
 type ImportMode = "json" | "csv";
 type ImportJob = Record<string, unknown>;
+type PreviewStatus = "ready" | "duplicate" | "invalid";
 
 type DataSourceItem = {
   id: string;
@@ -223,6 +230,80 @@ function applySelectedSource(jobs: ImportJob[], sourceCode: string) {
   }));
 }
 
+function getDedupInput(job: ImportJob) {
+  return {
+    city: getPreviewText(job, "city"),
+    company: getPreviewText(job, "company"),
+    source: getPreviewText(job, "source"),
+    title: getPreviewText(job, "title"),
+  };
+}
+
+function getPreviewSummary(jobs: ImportJob[]) {
+  const seenKeys = new Set<string>();
+  let importable = 0;
+  let skippedDuplicates = 0;
+  let skippedInvalid = 0;
+
+  const rows = jobs.map((job, index) => {
+    let status: PreviewStatus = "ready";
+    const dedupInput = getDedupInput(job);
+
+    if (isInvalidImportJob(dedupInput)) {
+      status = "invalid";
+      skippedInvalid += 1;
+    } else {
+      const dedupKey = createJobDedupKey(dedupInput);
+
+      if (seenKeys.has(dedupKey)) {
+        status = "duplicate";
+        skippedDuplicates += 1;
+      } else {
+        seenKeys.add(dedupKey);
+        importable += 1;
+      }
+    }
+
+    return {
+      index,
+      job,
+      status,
+    };
+  });
+
+  return {
+    importable,
+    rows,
+    skippedDuplicates,
+    skippedInvalid,
+    total: jobs.length,
+  };
+}
+
+function getStatusLabel(status: PreviewStatus) {
+  if (status === "invalid") {
+    return "无效";
+  }
+
+  if (status === "duplicate") {
+    return "可能重复";
+  }
+
+  return "可导入";
+}
+
+function getStatusClassName(status: PreviewStatus) {
+  if (status === "invalid") {
+    return "bg-red-50 text-red-700";
+  }
+
+  if (status === "duplicate") {
+    return "bg-amber-50 text-amber-700";
+  }
+
+  return "bg-emerald-50 text-emerald-700";
+}
+
 export default function AdminImportPage() {
   const [importMode, setImportMode] = useState<ImportMode>("json");
   const [jsonText, setJsonText] = useState(exampleText);
@@ -239,6 +320,7 @@ export default function AdminImportPage() {
 
   const currentText = importMode === "json" ? jsonText : csvText;
   const activeDataSources = dataSources.filter((source) => source.isActive);
+  const previewSummary = getPreviewSummary(previewJobs);
 
   useEffect(() => {
     let isActive = true;
@@ -575,32 +657,44 @@ export default function AdminImportPage() {
                 <div className="mt-4 space-y-4">
                   <dl className="grid gap-3 text-sm">
                     <div className="rounded-md bg-slate-50 px-4 py-3">
-                      <dt className="text-slate-500">新增数量</dt>
+                      <dt className="text-slate-500">总读取数量</dt>
                       <dd className="mt-1 font-bold text-slate-950">
-                        {result.importedCount}
+                        {result.total}
                       </dd>
                     </div>
                     <div className="rounded-md bg-slate-50 px-4 py-3">
-                      <dt className="text-slate-500">更新数量</dt>
+                      <dt className="text-slate-500">成功导入</dt>
                       <dd className="mt-1 font-bold text-slate-950">
-                        {result.updatedCount}
+                        {result.imported}
                       </dd>
                     </div>
                     <div className="rounded-md bg-slate-50 px-4 py-3">
-                      <dt className="text-slate-500">失败数量</dt>
+                      <dt className="text-slate-500">跳过重复</dt>
                       <dd className="mt-1 font-bold text-slate-950">
-                        {result.failedCount}
+                        {result.skippedDuplicates}
+                      </dd>
+                    </div>
+                    <div className="rounded-md bg-slate-50 px-4 py-3">
+                      <dt className="text-slate-500">跳过无效</dt>
+                      <dd className="mt-1 font-bold text-slate-950">
+                        {result.skippedInvalid}
+                      </dd>
+                    </div>
+                    <div className="rounded-md bg-slate-50 px-4 py-3">
+                      <dt className="text-slate-500">错误数量</dt>
+                      <dd className="mt-1 font-bold text-slate-950">
+                        {result.errors}
                       </dd>
                     </div>
                   </dl>
 
-                  {result.errors.length > 0 ? (
+                  {result.errorDetails.length > 0 ? (
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900">
-                        错误明细
+                        错误详情（最多显示前 10 条）
                       </h3>
                       <ul className="mt-2 space-y-2 text-sm text-red-600">
-                        {result.errors.map((error) => (
+                        {result.errorDetails.map((error) => (
                           <li
                             className="rounded-md bg-red-50 px-3 py-2"
                             key={`${error.index}-${error.message}`}
@@ -627,8 +721,11 @@ export default function AdminImportPage() {
               <div>
                 <h2 className="text-xl font-bold text-slate-950">导入预览</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  将要导入 {previewJobs.length} 个职位，下面展示前{" "}
-                  {Math.min(previewJobs.length, 20)} 条。
+                  读取 {previewSummary.total} 条，预计可导入{" "}
+                  {previewSummary.importable} 条，预计跳过重复{" "}
+                  {previewSummary.skippedDuplicates} 条，预计跳过无效{" "}
+                  {previewSummary.skippedInvalid} 条。下面展示前{" "}
+                  {Math.min(previewSummary.total, 20)} 条。
                 </p>
               </div>
               <button
@@ -651,10 +748,11 @@ export default function AdminImportPage() {
                     <th className="px-4 py-3 font-semibold">省份</th>
                     <th className="px-4 py-3 font-semibold">薪资</th>
                     <th className="px-4 py-3 font-semibold">来源</th>
+                    <th className="px-4 py-3 font-semibold">预览状态</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
-                  {previewJobs.slice(0, 20).map((job, index) => (
+                  {previewSummary.rows.slice(0, 20).map(({ index, job, status }) => (
                     <tr className="transition hover:bg-slate-50" key={index}>
                       <td className="max-w-xs px-4 py-3 font-semibold text-slate-950">
                         {getPreviewText(job, "title") || "未填写"}
@@ -673,6 +771,13 @@ export default function AdminImportPage() {
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-slate-600">
                         {getPreviewText(job, "source") || "manual-import"}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusClassName(status)}`}
+                        >
+                          {getStatusLabel(status)}
+                        </span>
                       </td>
                     </tr>
                   ))}
