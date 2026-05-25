@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
+import { requireCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { EducationLevel, SearchJobsParams } from "@/lib/providers/types";
 import { educationLevels } from "@/lib/providers/types";
 
-const GUEST_VISITOR_ID = "guest-user";
 const DEFAULT_SOURCE = "china-mock";
 
 type SearchHistoryRecord = {
@@ -58,9 +58,15 @@ function toApiHistory(history: SearchHistoryRecord) {
 
 export async function GET() {
   try {
+    const { response, user } = await requireCurrentUser();
+
+    if (response) {
+      return response;
+    }
+
     const histories = await prisma.searchHistory.findMany({
       where: {
-        visitorId: GUEST_VISITOR_ID,
+        userId: user.id,
       },
       orderBy: {
         createdAt: "desc",
@@ -82,6 +88,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const { response, user } = await requireCurrentUser();
+
+    if (response) {
+      return response;
+    }
+
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     const searchParams = parseSearchParams(body);
     const source = typeof body.source === "string" ? body.source : DEFAULT_SOURCE;
@@ -89,7 +101,8 @@ export async function POST(request: Request) {
 
     const history = await prisma.searchHistory.create({
       data: {
-        visitorId: GUEST_VISITOR_ID,
+        visitorId: user.id,
+        userId: user.id,
         educationLevel: searchParams.educationLevel,
         expectedSalaryMin: searchParams.expectedSalaryMin,
         expectedSalaryMax: searchParams.expectedSalaryMax,
@@ -115,9 +128,15 @@ export async function POST(request: Request) {
 
 export async function DELETE() {
   try {
+    const { response, user } = await requireCurrentUser();
+
+    if (response) {
+      return response;
+    }
+
     await prisma.searchHistory.deleteMany({
       where: {
-        visitorId: GUEST_VISITOR_ID,
+        userId: user.id,
       },
     });
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PublicNav } from "@/components/PublicNav";
 import {
   applicationStatuses,
   applicationStatusLabels,
@@ -7,6 +8,7 @@ import {
   type ApplicationStatus,
 } from "@/lib/applicationStatus";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -121,7 +123,44 @@ function RankingList({
 }
 
 export default async function ApplicationsPage() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return (
+      <>
+        <PublicNav />
+        <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-16 text-slate-950">
+          <section className="w-full max-w-xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-xl shadow-slate-200/70">
+            <h1 className="text-3xl font-bold tracking-tight">
+              登录后查看我的申请
+            </h1>
+            <p className="mt-4 text-sm leading-6 text-slate-600">
+              申请进度会按你的账号保存，登录后可以查看和管理所有申请记录。
+            </p>
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link
+                className="inline-flex justify-center rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
+                href="/login"
+              >
+                登录
+              </Link>
+              <Link
+                className="inline-flex justify-center rounded-md border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-950/10"
+                href="/signup"
+              >
+                注册
+              </Link>
+            </div>
+          </section>
+        </main>
+      </>
+    );
+  }
+
   const applications = await prisma.applicationRecord.findMany({
+    where: {
+      userId: user.id,
+    },
     include: {
       job: {
         select: {
@@ -174,8 +213,10 @@ export default async function ApplicationsPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950 sm:px-10">
-      <div className="mx-auto max-w-6xl">
+    <>
+      <PublicNav />
+      <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950 sm:px-10">
+        <div className="mx-auto max-w-6xl">
         <section className="text-center">
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
             我的申请
@@ -357,7 +398,8 @@ export default async function ApplicationsPage() {
             </div>
           )}
         </section>
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   );
 }

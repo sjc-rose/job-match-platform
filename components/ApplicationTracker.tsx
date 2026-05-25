@@ -87,6 +87,10 @@ export function ApplicationTracker({
           `/api/applications?jobId=${encodeURIComponent(jobId)}`,
         );
 
+        if (response.status === 401) {
+          throw new Error("请先登录后管理申请状态");
+        }
+
         if (!response.ok) {
           throw new Error("申请状态加载失败");
         }
@@ -147,6 +151,10 @@ export function ApplicationTracker({
         application?: ApplicationRecord;
         error?: string;
       };
+
+      if (response.status === 401) {
+        throw new Error("请先登录后修改申请状态");
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "申请状态保存失败");
