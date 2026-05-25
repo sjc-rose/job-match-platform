@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type ImportResult = {
   importedCount: number;
@@ -15,6 +15,18 @@ type ImportResult = {
 
 type ImportMode = "json" | "csv";
 type ImportJob = Record<string, unknown>;
+
+type DataSourceItem = {
+  id: string;
+  name: string;
+  code: string;
+  type: string;
+  isActive: boolean;
+};
+
+type DataSourcesResponse = {
+  sources: DataSourceItem[];
+};
 
 const csvHeaders = [
   "title",
@@ -204,18 +216,66 @@ function formatPreviewSalary(job: ImportJob) {
   return `${salaryMin || "0"}-${salaryMax || "0"} 元/月`;
 }
 
+function applySelectedSource(jobs: ImportJob[], sourceCode: string) {
+  return jobs.map((job) => ({
+    ...job,
+    source: sourceCode,
+  }));
+}
+
 export default function AdminImportPage() {
   const [importMode, setImportMode] = useState<ImportMode>("json");
   const [jsonText, setJsonText] = useState(exampleText);
   const [csvText, setCsvText] = useState(csvExample);
+  const [dataSources, setDataSources] = useState<DataSourceItem[]>([]);
+  const [selectedSourceCode, setSelectedSourceCode] = useState("");
   const [previewJobs, setPreviewJobs] = useState<ImportJob[]>([]);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [selectedFileName, setSelectedFileName] = useState("");
   const [isPreviewReady, setIsPreviewReady] = useState(false);
+  const [isLoadingSources, setIsLoadingSources] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const currentText = importMode === "json" ? jsonText : csvText;
+  const activeDataSources = dataSources.filter((source) => source.isActive);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadDataSources() {
+      try {
+        const response = await fetch("/api/admin/sources");
+
+        if (!response.ok) {
+          throw new Error("数据源加载失败");
+        }
+
+        const data = (await response.json()) as DataSourcesResponse;
+
+        if (isActive) {
+          setDataSources(data.sources.filter((source) => source.isActive));
+        }
+      } catch (error) {
+        if (isActive) {
+          setDataSources([]);
+          setErrorMessage(
+            error instanceof Error ? error.message : "数据源加载失败",
+          );
+        }
+      } finally {
+        if (isActive) {
+          setIsLoadingSources(false);
+        }
+      }
+    }
+
+    void loadDataSources();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   function resetPreview() {
     setPreviewJobs([]);
@@ -251,13 +311,21 @@ export default function AdminImportPage() {
     setResult(null);
 
     try {
+      if (activeDataSources.length === 0) {
+        throw new Error("请先到 /admin/sources 新增并启用数据源。");
+      }
+
+      if (!selectedSourceCode) {
+        throw new Error("请选择数据源后再预览导入");
+      }
+
       const parsedJobs = parseImportJobs(importMode, currentText);
 
       if (parsedJobs.length === 0) {
         throw new Error("没有可预览的职位数据");
       }
 
-      setPreviewJobs(parsedJobs);
+      setPreviewJobs(applySelectedSource(parsedJobs, selectedSourceCode));
       setIsPreviewReady(true);
     } catch (error) {
       setErrorMessage(
@@ -273,6 +341,11 @@ export default function AdminImportPage() {
       return;
     }
 
+    if (!selectedSourceCode) {
+      setErrorMessage("请选择数据源后再确认导入");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage("");
     setResult(null);
@@ -283,7 +356,7 @@ export default function AdminImportPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(previewJobs),
+        body: JSON.stringify(applySelectedSource(previewJobs, selectedSourceCode)),
       });
 
       if (!response.ok) {
@@ -363,6 +436,43 @@ export default function AdminImportPage() {
 
               <label className="mb-5 block">
                 <span className="text-sm font-medium text-slate-700">
+                  数据源
+                </span>
+                <select
+                  className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                  disabled={isLoadingSources || activeDataSources.length === 0}
+                  onChange={(event) => {
+                    setSelectedSourceCode(event.target.value);
+                    resetPreview();
+                    setErrorMessage("");
+                  }}
+                  value={selectedSourceCode}
+                >
+                  <option value="">
+                    {isLoadingSources ? "正在加载数据源..." : "请选择数据源"}
+                  </option>
+                  {activeDataSources.map((source) => (
+                    <option key={source.id} value={source.code}>
+                      {source.name}（{source.code}）
+                    </option>
+                  ))}
+                </select>
+                {!isLoadingSources && activeDataSources.length === 0 ? (
+                  <span className="mt-2 block text-sm text-amber-700">
+                    请先到{" "}
+                    <Link
+                      className="font-semibold text-teal-700 transition hover:text-teal-800"
+                      href="/admin/sources"
+                    >
+                      /admin/sources
+                    </Link>{" "}
+                    新增并启用数据源。
+                  </span>
+                ) : null}
+              </label>
+
+              <label className="mb-5 block">
+                <span className="text-sm font-medium text-slate-700">
                   选择 {importMode === "json" ? "JSON" : "CSV"} 文件
                 </span>
                 <input
@@ -410,7 +520,11 @@ export default function AdminImportPage() {
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button
                   className="inline-flex justify-center rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={isSubmitting}
+                  disabled={
+                    isSubmitting ||
+                    isLoadingSources ||
+                    activeDataSources.length === 0
+                  }
                   type="submit"
                 >
                   预览导入
