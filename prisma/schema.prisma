@@ -27,6 +27,7 @@ model Job {
   createdAt             DateTime      @default(now()) @map("created_at")
   updatedAt             DateTime      @updatedAt @map("updated_at")
   favorites             FavoriteJob[]
+  applicationRecords    ApplicationRecord[]
 
   @@unique([source, sourceJobId])
   @@index([source])
@@ -35,6 +36,21 @@ model Job {
   @@index([city])
   @@index([publishedAt])
   @@map("jobs")
+}
+
+model ApplicationRecord {
+  id        String    @id @default(cuid())
+  jobId     String    @unique @map("job_id")
+  status    String    @default("not_applied")
+  note      String?   @db.Text
+  appliedAt DateTime? @map("applied_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  job       Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([updatedAt])
+  @@map("application_records")
 }
 
 model FavoriteJob {

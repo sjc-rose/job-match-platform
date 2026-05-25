@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ApplicationTracker } from "@/components/ApplicationTracker";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { prisma } from "@/lib/prisma";
 import { chinaMockProvider } from "@/lib/providers/chinaMockProvider";
@@ -200,6 +201,16 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
           数据来源：{formatSource(job.source)} · 发布日期：
           {formatPublishedAt(job.publishedAt)}
         </p>
+
+        <ApplicationTracker
+          disabled={!job.isDatabaseJob || isUnavailable}
+          disabledMessage={
+            isUnavailable
+              ? "该职位已下线或已过期，暂不支持申请状态管理。"
+              : "示例职位暂不支持申请状态管理。"
+          }
+          jobId={job.id}
+        />
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           {isUnavailable ? (
