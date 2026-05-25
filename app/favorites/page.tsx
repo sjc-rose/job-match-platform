@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import {
+  getApplicationStatusLabel,
+  toApplicationStatus,
+  type ApplicationStatus,
+} from "@/lib/applicationStatus";
+import {
   FAVORITES_CHANGED_EVENT,
   getFavoriteJobIds,
   setFavoriteJobIds as saveFavoriteJobIds,
@@ -11,13 +16,37 @@ import {
 import { chinaMockJobs } from "@/lib/providers/chinaMockProvider";
 import type { Job } from "@/lib/providers/types";
 
+type ApplicationRecord = {
+  jobId: string;
+  status: ApplicationStatus;
+};
+
 function formatLocation(province: string, city: string) {
   return province === city ? city : `${province} · ${city}`;
+}
+
+function getStatusClassName(status: ApplicationStatus) {
+  if (status === "offer") {
+    return "bg-emerald-50 text-emerald-700";
+  }
+
+  if (status === "interviewing") {
+    return "bg-teal-50 text-teal-700";
+  }
+
+  if (status === "applied") {
+    return "bg-sky-50 text-sky-700";
+  }
+
+  return "bg-slate-100 text-slate-600";
 }
 
 export default function FavoritesPage() {
   const [favoriteJobIds, setFavoriteJobIdsState] = useState<string[]>([]);
   const [databaseFavoriteJobs, setDatabaseFavoriteJobs] = useState<Job[]>([]);
+  const [applicationStatusByJobId, setApplicationStatusByJobId] = useState<
+    Record<string, ApplicationStatus>
+  >({});
   const [isLoading, setIsLoading] = useState(true);
   const [isUsingFallback, setIsUsingFallback] = useState(false);
 
@@ -30,7 +59,10 @@ export default function FavoritesPage() {
       setIsLoading(true);
 
       try {
-        const response = await fetch("/api/favorites");
+        const [response, applicationsResponse] = await Promise.all([
+          fetch("/api/favorites"),
+          fetch("/api/applications"),
+        ]);
 
         if (!response.ok) {
           throw new Error("Failed to fetch favorite jobs");
@@ -40,10 +72,28 @@ export default function FavoritesPage() {
         saveFavoriteJobIds(data.jobIds);
         setDatabaseFavoriteJobs(data.jobs);
         setFavoriteJobIdsState(data.jobIds);
+
+        if (applicationsResponse.ok) {
+          const applicationsData = (await applicationsResponse.json()) as {
+            applications: ApplicationRecord[];
+          };
+          setApplicationStatusByJobId(
+            Object.fromEntries(
+              applicationsData.applications.map((application) => [
+                application.jobId,
+                toApplicationStatus(application.status),
+              ]),
+            ),
+          );
+        } else {
+          setApplicationStatusByJobId({});
+        }
+
         setIsUsingFallback(false);
       } catch {
         syncFavorites();
         setDatabaseFavoriteJobs([]);
+        setApplicationStatusByJobId({});
         setIsUsingFallback(true);
       } finally {
         setIsLoading(false);
@@ -137,6 +187,25 @@ export default function FavoritesPage() {
                       <dt className="text-slate-500">数据来源</dt>
                       <dd className="mt-1 font-semibold text-slate-900">
                         国内示例数据
+                      </dd>
+                    </div>
+                    <div className="rounded-md bg-slate-50 px-4 py-3">
+                      <dt className="text-slate-500">申请状态</dt>
+                      <dd className="mt-2">
+                        {(() => {
+                          const applicationStatus =
+                            applicationStatusByJobId[job.id] ?? "not_applied";
+
+                          return (
+                            <span
+                              className={`inline-flex rounded-md px-3 py-1 text-xs font-semibold ${getStatusClassName(
+                                applicationStatus,
+                              )}`}
+                            >
+                              {getApplicationStatusLabel(applicationStatus)}
+                            </span>
+                          );
+                        })()}
                       </dd>
                     </div>
                   </dl>

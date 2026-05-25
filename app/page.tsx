@@ -23,6 +23,12 @@ export default function Home() {
           >
             我的收藏
           </Link>
+          <Link
+            href="/applications"
+            className="rounded-md border border-slate-300 bg-white px-8 py-3 text-base font-semibold text-slate-900 transition hover:border-teal-500 hover:text-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/15"
+          >
+            我的申请
+          </Link>
         </div>
       </section>
     </main>
