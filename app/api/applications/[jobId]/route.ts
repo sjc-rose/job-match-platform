@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toApplicationStatus } from "@/lib/applicationStatus";
 
@@ -52,6 +53,12 @@ export async function PATCH(request: Request, { params }: ApplicationRouteProps)
   }
 
   try {
+    const { response, user } = await requireCurrentUser();
+
+    if (response) {
+      return response;
+    }
+
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     const status = toApplicationStatus(body.status);
     const note = parseString(body.note);
@@ -72,10 +79,14 @@ export async function PATCH(request: Request, { params }: ApplicationRouteProps)
 
     const record = await prisma.applicationRecord.upsert({
       where: {
-        jobId,
+        userId_jobId: {
+          userId: user.id,
+          jobId,
+        },
       },
       create: {
         jobId,
+        userId: user.id,
         status,
         note: note || null,
         appliedAt,

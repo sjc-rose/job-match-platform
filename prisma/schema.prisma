@@ -40,7 +40,8 @@ model Job {
 
 model ApplicationRecord {
   id        String    @id @default(cuid())
-  jobId     String    @unique @map("job_id")
+  jobId     String    @map("job_id")
+  userId    String?   @map("user_id")
   status    String    @default("not_applied")
   note      String?   @db.Text
   appliedAt DateTime? @map("applied_at")
@@ -48,6 +49,9 @@ model ApplicationRecord {
   updatedAt DateTime  @updatedAt @map("updated_at")
   job       Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, jobId])
+  @@index([jobId])
+  @@index([userId])
   @@index([status])
   @@index([updatedAt])
   @@map("application_records")
@@ -56,12 +60,15 @@ model ApplicationRecord {
 model FavoriteJob {
   id        String   @id @default(cuid())
   visitorId String   @map("visitor_id")
+  userId    String?  @map("user_id")
   jobId     String   @map("job_id")
   job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([visitorId, jobId])
+  @@unique([userId, jobId])
   @@index([visitorId])
+  @@index([userId])
   @@index([jobId])
   @@map("favorite_jobs")
 }
@@ -69,6 +76,7 @@ model FavoriteJob {
 model SearchHistory {
   id                String   @id @default(cuid())
   visitorId         String?  @map("visitor_id")
+  userId            String?  @map("user_id")
   educationLevel    String?  @map("education_level")
   expectedSalaryMin Int?     @map("expected_salary_min")
   expectedSalaryMax Int?     @map("expected_salary_max")
@@ -80,6 +88,7 @@ model SearchHistory {
   createdAt         DateTime @default(now()) @map("created_at")
 
   @@index([visitorId])
+  @@index([userId])
   @@index([city])
   @@index([createdAt])
   @@map("search_histories")

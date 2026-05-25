@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { PublicNav } from "@/components/PublicNav";
 import {
   getApplicationStatusLabel,
   toApplicationStatus,
@@ -49,6 +50,7 @@ export default function FavoritesPage() {
   >({});
   const [isLoading, setIsLoading] = useState(true);
   const [isUsingFallback, setIsUsingFallback] = useState(false);
+  const [isLoginRequired, setIsLoginRequired] = useState(false);
 
   useEffect(() => {
     function syncFavorites() {
@@ -65,6 +67,13 @@ export default function FavoritesPage() {
         ]);
 
         if (!response.ok) {
+          if (response.status === 401) {
+            setIsLoginRequired(true);
+            setDatabaseFavoriteJobs([]);
+            setFavoriteJobIdsState([]);
+            return;
+          }
+
           throw new Error("Failed to fetch favorite jobs");
         }
 
@@ -77,7 +86,7 @@ export default function FavoritesPage() {
           const applicationsData = (await applicationsResponse.json()) as {
             applications: ApplicationRecord[];
           };
-          setApplicationStatusByJobId(
+        setApplicationStatusByJobId(
             Object.fromEntries(
               applicationsData.applications.map((application) => [
                 application.jobId,
@@ -90,11 +99,13 @@ export default function FavoritesPage() {
         }
 
         setIsUsingFallback(false);
+        setIsLoginRequired(false);
       } catch {
         syncFavorites();
         setDatabaseFavoriteJobs([]);
         setApplicationStatusByJobId({});
         setIsUsingFallback(true);
+        setIsLoginRequired(false);
       } finally {
         setIsLoading(false);
       }
@@ -125,8 +136,10 @@ export default function FavoritesPage() {
   );
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950 sm:px-10">
-      <div className="mx-auto max-w-6xl">
+    <>
+      <PublicNav />
+      <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950 sm:px-10">
+        <div className="mx-auto max-w-6xl">
         <section className="text-center">
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
             我的收藏
@@ -140,6 +153,29 @@ export default function FavoritesPage() {
           {isLoading ? (
             <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-600 shadow-lg shadow-slate-200/60">
               正在加载收藏职位...
+            </div>
+          ) : isLoginRequired ? (
+            <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-lg shadow-slate-200/60">
+              <p className="text-base font-semibold text-slate-900">
+                登录后查看收藏职位
+              </p>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                收藏职位会按你的账号保存，换设备也能继续查看。
+              </p>
+              <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                <Link
+                  className="inline-flex justify-center rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
+                  href="/login"
+                >
+                  登录
+                </Link>
+                <Link
+                  className="inline-flex justify-center rounded-md border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-950/10"
+                  href="/signup"
+                >
+                  注册
+                </Link>
+              </div>
             </div>
           ) : favoriteJobs.length > 0 ? (
             <div className="grid gap-5 lg:grid-cols-2">
@@ -251,7 +287,8 @@ export default function FavoritesPage() {
             </div>
           )}
         </section>
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   );
 }

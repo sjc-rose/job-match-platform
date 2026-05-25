@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ApplicationTracker } from "@/components/ApplicationTracker";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { PublicNav } from "@/components/PublicNav";
 import { prisma } from "@/lib/prisma";
 import { chinaMockProvider } from "@/lib/providers/chinaMockProvider";
 import type { Job } from "@/lib/providers/types";
@@ -113,28 +114,33 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
 
   if (!job) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-16 text-slate-950">
-        <section className="w-full max-w-xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-xl shadow-slate-200/70">
-          <h1 className="text-3xl font-bold tracking-tight">职位不存在</h1>
-          <p className="mt-4 text-sm leading-6 text-slate-600">
-            这个职位可能已下线，或当前国内示例数据中没有对应记录。
-          </p>
-          <Link
-            className="mt-8 inline-flex rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
-            href="/search"
-          >
-            返回搜索页
-          </Link>
-        </section>
-      </main>
+      <>
+        <PublicNav />
+        <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-16 text-slate-950">
+          <section className="w-full max-w-xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-xl shadow-slate-200/70">
+            <h1 className="text-3xl font-bold tracking-tight">职位不存在</h1>
+            <p className="mt-4 text-sm leading-6 text-slate-600">
+              这个职位可能已下线，或当前国内示例数据中没有对应记录。
+            </p>
+            <Link
+              className="mt-8 inline-flex rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
+              href="/search"
+            >
+              返回搜索页
+            </Link>
+          </section>
+        </main>
+      </>
     );
   }
 
   const isUnavailable = job.isDatabaseJob && job.status !== "active";
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950 sm:px-10">
-      <article className="mx-auto max-w-4xl rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70 sm:p-8">
+    <>
+      <PublicNav />
+      <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950 sm:px-10">
+        <article className="mx-auto max-w-4xl rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70 sm:p-8">
         <div className="flex flex-col gap-6 border-b border-slate-100 pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-4xl font-bold tracking-tight text-slate-950">
@@ -242,7 +248,8 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
             返回搜索页
           </Link>
         </div>
-      </article>
-    </main>
+        </article>
+      </main>
+    </>
   );
 }

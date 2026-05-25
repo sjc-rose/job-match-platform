@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toApplicationStatus } from "@/lib/applicationStatus";
 
@@ -52,6 +53,12 @@ function toApiApplication(record: ApplicationRecordWithJob) {
 
 export async function GET(request: Request) {
   try {
+    const { response, user } = await requireCurrentUser();
+
+    if (response) {
+      return response;
+    }
+
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get("jobId")?.trim() ?? "";
 
@@ -59,8 +66,11 @@ export async function GET(request: Request) {
       where: jobId
         ? {
             jobId,
+            userId: user.id,
           }
-        : undefined,
+        : {
+            userId: user.id,
+          },
       include: {
         job: {
           select: {
@@ -93,6 +103,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { response, user } = await requireCurrentUser();
+
+    if (response) {
+      return response;
+    }
+
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     const jobId = parseString(body.jobId);
     const status = toApplicationStatus(body.status);
@@ -118,10 +134,14 @@ export async function POST(request: Request) {
 
     const record = await prisma.applicationRecord.upsert({
       where: {
-        jobId,
+        userId_jobId: {
+          userId: user.id,
+          jobId,
+        },
       },
       create: {
         jobId,
+        userId: user.id,
         status,
         note: note || null,
         appliedAt,

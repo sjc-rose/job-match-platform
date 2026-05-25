@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
+import { requireCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { chinaMockJobs } from "@/lib/providers/chinaMockProvider";
 import type { Job as ProviderJob } from "@/lib/providers/types";
-
-const GUEST_VISITOR_ID = "guest-user";
 
 function toApiJob(job: {
   id: string;
@@ -90,6 +89,20 @@ async function upsertJobFromMock(jobId: string) {
   });
 }
 
+async function ensureJobExists(jobId: string) {
+  const existingJob = await prisma.job.findUnique({
+    where: {
+      id: jobId,
+    },
+  });
+
+  if (existingJob) {
+    return existingJob;
+  }
+
+  return upsertJobFromMock(jobId);
+}
+
 async function parseJobId(request: Request) {
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   return typeof body.jobId === "string" ? body.jobId : "";
@@ -97,9 +110,15 @@ async function parseJobId(request: Request) {
 
 export async function GET() {
   try {
+    const { response, user } = await requireCurrentUser();
+
+    if (response) {
+      return response;
+    }
+
     const favorites = await prisma.favoriteJob.findMany({
       where: {
-        visitorId: GUEST_VISITOR_ID,
+        userId: user.id,
       },
       include: {
         job: true,
@@ -125,13 +144,19 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const { response, user } = await requireCurrentUser();
+
+    if (response) {
+      return response;
+    }
+
     const jobId = await parseJobId(request);
 
     if (!jobId) {
       return NextResponse.json({ error: "jobId is required" }, { status: 400 });
     }
 
-    const job = await upsertJobFromMock(jobId);
+    const job = await ensureJobExists(jobId);
 
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
@@ -139,13 +164,14 @@ export async function POST(request: Request) {
 
     await prisma.favoriteJob.upsert({
       where: {
-        visitorId_jobId: {
-          visitorId: GUEST_VISITOR_ID,
+        userId_jobId: {
+          userId: user.id,
           jobId,
         },
       },
       create: {
-        visitorId: GUEST_VISITOR_ID,
+        visitorId: user.id,
+        userId: user.id,
         jobId,
       },
       update: {},
@@ -167,6 +193,12 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const { response, user } = await requireCurrentUser();
+
+    if (response) {
+      return response;
+    }
+
     const jobId = await parseJobId(request);
 
     if (!jobId) {
@@ -175,7 +207,7 @@ export async function DELETE(request: Request) {
 
     await prisma.favoriteJob.deleteMany({
       where: {
-        visitorId: GUEST_VISITOR_ID,
+        userId: user.id,
         jobId,
       },
     });

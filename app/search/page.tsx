@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { PublicNav } from "@/components/PublicNav";
 import type { JobMatch, UserProfile } from "@/lib/matching";
 import { educationLevels } from "@/lib/providers/types";
 
@@ -98,6 +99,10 @@ export default function SearchPage() {
       try {
         const response = await fetch("/api/search-history");
 
+        if (response.status === 401) {
+          throw new Error("登录后可查看搜索记录");
+        }
+
         if (!response.ok) {
           throw new Error("搜索记录加载失败");
         }
@@ -107,10 +112,12 @@ export default function SearchPage() {
         if (isActive) {
           setSearchHistories(data.histories);
         }
-      } catch {
+      } catch (error) {
         if (isActive) {
           setSearchHistories([]);
-          setHistoryError("搜索记录暂时不可用");
+          setHistoryError(
+            error instanceof Error ? error.message : "搜索记录暂时不可用",
+          );
         }
       } finally {
         if (isActive) {
@@ -153,6 +160,10 @@ export default function SearchPage() {
         }),
       });
 
+      if (response.status === 401) {
+        throw new Error("登录后可保存搜索记录");
+      }
+
       if (!response.ok) {
         throw new Error("搜索记录保存失败");
       }
@@ -166,8 +177,12 @@ export default function SearchPage() {
           .slice(0, 9),
       ]);
       setHistoryError("");
-    } catch {
-      setHistoryError("搜索记录保存失败，但职位匹配结果不受影响");
+    } catch (error) {
+      setHistoryError(
+        error instanceof Error
+          ? error.message
+          : "搜索记录保存失败，但职位匹配结果不受影响",
+      );
     }
   }
 
@@ -232,19 +247,27 @@ export default function SearchPage() {
         method: "DELETE",
       });
 
+      if (response.status === 401) {
+        throw new Error("登录后可清空搜索记录");
+      }
+
       if (!response.ok) {
         throw new Error("清空搜索记录失败");
       }
 
       setSearchHistories([]);
-    } catch {
-      setHistoryError("清空搜索记录失败，请稍后重试");
+    } catch (error) {
+      setHistoryError(
+        error instanceof Error ? error.message : "清空搜索记录失败，请稍后重试",
+      );
     }
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950 sm:px-10">
-      <div className="mx-auto max-w-6xl">
+    <>
+      <PublicNav />
+      <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950 sm:px-10">
+        <div className="mx-auto max-w-6xl">
         <section className="text-center">
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
             填写求职条件
@@ -545,7 +568,8 @@ export default function SearchPage() {
             )}
           </section>
         ) : null}
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   );
 }

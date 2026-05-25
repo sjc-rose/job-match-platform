@@ -26,6 +26,7 @@ export function FavoriteButton({
 }: FavoriteButtonProps) {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     function syncFavoriteState() {
@@ -35,6 +36,11 @@ export function FavoriteButton({
     async function syncFavoriteStateFromApi() {
       try {
         const response = await fetch("/api/favorites");
+
+        if (response.status === 401) {
+          setMessage("请先登录后收藏职位");
+          return;
+        }
 
         if (!response.ok) {
           throw new Error("Failed to fetch favorites");
@@ -68,6 +74,7 @@ export function FavoriteButton({
 
     setIsFavorite(nextIsFavorite);
     setIsSaving(true);
+    setMessage("");
 
     try {
       const response = await fetch("/api/favorites", {
@@ -77,6 +84,12 @@ export function FavoriteButton({
         },
         body: JSON.stringify({ jobId }),
       });
+
+      if (response.status === 401) {
+        setIsFavorite(isFavorite);
+        setMessage("请先登录后收藏职位");
+        return;
+      }
 
       if (!response.ok) {
         throw new Error("Failed to update favorite");
@@ -91,14 +104,19 @@ export function FavoriteButton({
   }
 
   return (
-    <button
-      aria-pressed={isFavorite}
-      className={className}
-      disabled={isSaving}
-      onClick={handleClick}
-      type="button"
-    >
-      {isFavorite ? activeLabel : inactiveLabel}
-    </button>
+    <span className="inline-flex flex-col gap-2">
+      <button
+        aria-pressed={isFavorite}
+        className={className}
+        disabled={isSaving}
+        onClick={handleClick}
+        type="button"
+      >
+        {isFavorite ? activeLabel : inactiveLabel}
+      </button>
+      {message ? (
+        <span className="text-xs font-semibold text-amber-700">{message}</span>
+      ) : null}
+    </span>
   );
 }
