@@ -237,21 +237,30 @@ export default async function RecommendationsPage() {
               <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-600 shadow-lg shadow-slate-200/60">
                 暂无可推荐职位
               </div>
-            ) : recommendations.length === 0 || !hasHighMatch ? (
+            ) : recommendations.length === 0 ? (
               <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-lg shadow-slate-200/60">
                 <p className="text-base font-semibold text-slate-900">
-                  暂无高匹配职位，可以尝试完善求职偏好
+                  暂无可推荐职位
+                </p>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  当前没有可展示的 active 职位，或你已处理了这些职位。
                 </p>
                 <Link
                   className="mt-6 inline-flex justify-center rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
                   href="/profile"
                 >
-                  去完善资料
+                  编辑求职偏好
                 </Link>
               </div>
             ) : (
-              <div className="grid gap-5 lg:grid-cols-2">
-                {recommendations.map(({ job, match }) => (
+              <>
+                {!hasHighMatch ? (
+                  <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-medium text-amber-800">
+                    暂无高匹配职位，下面先按当前资料展示低匹配候选。你可以完善求职偏好来提升推荐质量。
+                  </div>
+                ) : null}
+                <div className="grid gap-5 lg:grid-cols-2">
+                  {recommendations.map(({ job, match }) => (
                   <article
                     className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60"
                     key={job.id}
@@ -324,8 +333,9 @@ export default async function RecommendationsPage() {
                       </Link>
                     </div>
                   </article>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
           </section>
         </div>

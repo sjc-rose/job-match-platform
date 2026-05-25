@@ -387,7 +387,7 @@ export default async function ApplicationsPage() {
                 暂无申请记录
               </p>
               <p className="mt-3 text-sm leading-6 text-slate-600">
-                打开职位详情页，保存申请状态后会出现在这里。
+                打开职位详情页，把申请状态保存为已申请、面试中或其他进度后，这里会自动形成你的求职看板。
               </p>
               <Link
                 className="mt-6 inline-flex justify-center rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"

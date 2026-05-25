@@ -76,7 +76,7 @@ export function UserProfileForm({ initialProfile }: UserProfileFormProps) {
         throw new Error(data.error || "保存资料失败");
       }
 
-      setMessage("资料已保存");
+      setMessage("资料已保存，推荐职位和匹配度会使用最新偏好重新计算。");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "保存资料失败");
     } finally {
