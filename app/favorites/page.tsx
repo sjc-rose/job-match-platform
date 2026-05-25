@@ -152,7 +152,7 @@ export default function FavoritesPage() {
         <section className="mt-10">
           {isLoading ? (
             <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-600 shadow-lg shadow-slate-200/60">
-              正在加载收藏职位...
+              正在加载收藏职位，请稍候...
             </div>
           ) : isLoginRequired ? (
             <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-lg shadow-slate-200/60">
@@ -276,7 +276,7 @@ export default function FavoritesPage() {
                 暂无收藏职位
               </p>
               <p className="mt-3 text-sm leading-6 text-slate-600">
-                去搜索页收藏感兴趣的职位后，会在这里看到它们。
+                遇到感兴趣的职位先收藏起来，稍后可以统一比较和跟进。
               </p>
               <Link
                 className="mt-6 inline-flex justify-center rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"

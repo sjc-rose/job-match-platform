@@ -124,10 +124,16 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
               这个职位可能已下线，或当前国内示例数据中没有对应记录。
             </p>
             <Link
-              className="mt-8 inline-flex rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
+              className="mt-8 inline-flex justify-center rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
               href="/search"
             >
               返回搜索页
+            </Link>
+            <Link
+              className="mt-3 inline-flex justify-center rounded-md border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-teal-500 hover:text-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/15"
+              href="/recommendations"
+            >
+              查看推荐职位
             </Link>
           </section>
         </main>

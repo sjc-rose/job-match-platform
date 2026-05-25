@@ -415,7 +415,7 @@ export default function SearchPage() {
               </div>
             ) : (
               <div className="rounded-md bg-slate-50 px-4 py-5 text-sm text-slate-500">
-                暂无搜索记录
+                暂无搜索记录。完成一次搜索后，可以在这里快速复用条件。
               </div>
             )}
           </div>
@@ -533,8 +533,13 @@ export default function SearchPage() {
               </p>
             ) : null}
             {errorMessage ? (
-              <div className="rounded-lg border border-red-200 bg-white p-8 text-center text-red-600 shadow-lg shadow-slate-200/60">
-                {errorMessage}
+              <div className="rounded-lg border border-red-200 bg-white p-8 text-center shadow-lg shadow-slate-200/60">
+                <p className="text-base font-semibold text-red-600">
+                  搜索暂时失败
+                </p>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  {errorMessage}
+                </p>
               </div>
             ) : matches.length > 0 ? (
               <div className="grid gap-5 lg:grid-cols-2">
@@ -642,8 +647,13 @@ export default function SearchPage() {
                 })}
               </div>
             ) : (
-              <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-600 shadow-lg shadow-slate-200/60">
-                暂无匹配职位
+              <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-lg shadow-slate-200/60">
+                <p className="text-base font-semibold text-slate-900">
+                  暂无匹配职位
+                </p>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  可以尝试放宽薪资范围、减少关键词，或换一个城市继续搜索。
+                </p>
               </div>
             )}
           </section>
