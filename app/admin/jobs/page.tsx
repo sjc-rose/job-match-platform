@@ -21,6 +21,7 @@ type AdminJob = {
 
 type AdminJobsResponse = {
   jobs: AdminJob[];
+  sources: string[];
   total: number;
   page: number;
   pageSize: number;
@@ -29,6 +30,7 @@ type AdminJobsResponse = {
 
 const emptyJobsResponse: AdminJobsResponse = {
   jobs: [],
+  sources: [],
   total: 0,
   page: 1,
   pageSize: DEFAULT_PAGE_SIZE,
@@ -61,11 +63,20 @@ function formatLocation(job: AdminJob) {
   return job.province === job.city ? job.city : `${job.province} · ${job.city}`;
 }
 
+function getInitialSource() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return new URLSearchParams(window.location.search).get("source")?.trim() ?? "";
+}
+
 export default function AdminJobsPage() {
   const [keywordInput, setKeywordInput] = useState("");
   const [cityInput, setCityInput] = useState("");
   const [keyword, setKeyword] = useState("");
   const [city, setCity] = useState("");
+  const [source, setSource] = useState(getInitialSource);
   const [page, setPage] = useState(1);
   const [data, setData] = useState<AdminJobsResponse>(emptyJobsResponse);
   const [isLoading, setIsLoading] = useState(true);
@@ -88,6 +99,10 @@ export default function AdminJobsPage() {
 
       if (city) {
         params.set("city", city);
+      }
+
+      if (source) {
+        params.set("source", source);
       }
 
       setIsLoading(true);
@@ -124,7 +139,22 @@ export default function AdminJobsPage() {
     return () => {
       isActive = false;
     };
-  }, [city, keyword, page, refreshToken]);
+  }, [city, keyword, page, refreshToken, source]);
+
+  function updateSourceQuery(nextSource: string) {
+    const params = new URLSearchParams(window.location.search);
+
+    if (nextSource) {
+      params.set("source", nextSource);
+    } else {
+      params.delete("source");
+    }
+
+    const queryString = params.toString();
+    const nextUrl = queryString ? `/admin/jobs?${queryString}` : "/admin/jobs";
+
+    window.history.pushState(null, "", nextUrl);
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -138,7 +168,15 @@ export default function AdminJobsPage() {
     setCityInput("");
     setKeyword("");
     setCity("");
+    setSource("");
     setPage(1);
+    updateSourceQuery("");
+  }
+
+  function handleSourceChange(nextSource: string) {
+    setSource(nextSource);
+    setPage(1);
+    updateSourceQuery(nextSource);
   }
 
   async function handleDeleteJob(job: AdminJob) {
@@ -208,7 +246,7 @@ export default function AdminJobsPage() {
 
         <section className="mt-10 rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
           <form
-            className="grid gap-5 md:grid-cols-[1fr_1fr_auto]"
+            className="grid gap-5 md:grid-cols-[1fr_1fr_1fr_auto]"
             onSubmit={handleSubmit}
           >
             <label className="block">
@@ -231,6 +269,24 @@ export default function AdminJobsPage() {
                 type="text"
                 value={cityInput}
               />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">
+                数据来源
+              </span>
+              <select
+                className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/15"
+                onChange={(event) => handleSourceChange(event.target.value)}
+                value={source}
+              >
+                <option value="">全部来源</option>
+                {data.sources.map((sourceValue) => (
+                  <option key={sourceValue} value={sourceValue}>
+                    {sourceValue}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <div className="flex items-end gap-3">

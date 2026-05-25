@@ -72,7 +72,11 @@ function toApiJob(job: JobRecord) {
   };
 }
 
-function createWhere(keyword: string, city: string): Prisma.JobWhereInput {
+function createWhere(
+  keyword: string,
+  city: string,
+  source: string,
+): Prisma.JobWhereInput {
   const where: Prisma.JobWhereInput = {};
 
   if (keyword) {
@@ -105,6 +109,10 @@ function createWhere(keyword: string, city: string): Prisma.JobWhereInput {
     };
   }
 
+  if (source) {
+    where.source = source;
+  }
+
   return where;
 }
 
@@ -113,15 +121,16 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const keyword = searchParams.get("keyword")?.trim() ?? "";
     const city = searchParams.get("city")?.trim() ?? "";
+    const source = searchParams.get("source")?.trim() ?? "";
     const page = parsePositiveInteger(searchParams.get("page"), DEFAULT_PAGE);
     const requestedPageSize = parsePositiveInteger(
       searchParams.get("pageSize"),
       DEFAULT_PAGE_SIZE,
     );
     const pageSize = Math.min(requestedPageSize, MAX_PAGE_SIZE);
-    const where = createWhere(keyword, city);
+    const where = createWhere(keyword, city, source);
 
-    const [total, jobs] = await Promise.all([
+    const [total, jobs, sourceRows] = await Promise.all([
       prisma.job.count({
         where,
       }),
@@ -138,11 +147,21 @@ export async function GET(request: Request) {
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
+      prisma.job.findMany({
+        distinct: ["source"],
+        orderBy: {
+          source: "asc",
+        },
+        select: {
+          source: true,
+        },
+      }),
     ]);
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
     return NextResponse.json({
       jobs: jobs.map(toApiJob),
+      sources: sourceRows.map((row) => row.source),
       total,
       page,
       pageSize,
