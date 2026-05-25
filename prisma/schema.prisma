@@ -94,6 +94,24 @@ model SearchHistory {
   @@map("search_histories")
 }
 
+model UserProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique @map("user_id")
+  targetTitle       String?  @map("target_title")
+  targetCity        String?  @map("target_city")
+  expectedSalaryMin Int?     @map("expected_salary_min")
+  expectedSalaryMax Int?     @map("expected_salary_max")
+  education         String?
+  experienceYears   Int?     @map("experience_years")
+  skills            String?  @db.Text
+  selfIntroduction  String?  @map("self_introduction") @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("user_profiles")
+}
+
 model DataSource {
   id          String   @id @default(cuid())
   name        String
