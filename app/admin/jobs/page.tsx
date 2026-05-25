@@ -71,13 +71,69 @@ function getInitialSource() {
   return new URLSearchParams(window.location.search).get("source")?.trim() ?? "";
 }
 
+function getInitialQueryValue(key: string) {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return new URLSearchParams(window.location.search).get(key)?.trim() ?? "";
+}
+
+function getInitialPage() {
+  if (typeof window === "undefined") {
+    return 1;
+  }
+
+  const page = Number(new URLSearchParams(window.location.search).get("page"));
+
+  return Number.isInteger(page) && page > 0 ? page : 1;
+}
+
+type JobsQueryState = {
+  keyword: string;
+  city: string;
+  company: string;
+  source: string;
+  page: number;
+};
+
+function buildJobsUrl(queryState: JobsQueryState) {
+  const params = new URLSearchParams();
+
+  if (queryState.source) {
+    params.set("source", queryState.source);
+  }
+
+  if (queryState.keyword) {
+    params.set("keyword", queryState.keyword);
+  }
+
+  if (queryState.city) {
+    params.set("city", queryState.city);
+  }
+
+  if (queryState.company) {
+    params.set("company", queryState.company);
+  }
+
+  params.set("page", String(queryState.page));
+
+  return `/admin/jobs?${params.toString()}`;
+}
+
 export default function AdminJobsPage() {
-  const [keywordInput, setKeywordInput] = useState("");
-  const [cityInput, setCityInput] = useState("");
-  const [keyword, setKeyword] = useState("");
-  const [city, setCity] = useState("");
+  const [keywordInput, setKeywordInput] = useState(() =>
+    getInitialQueryValue("keyword"),
+  );
+  const [cityInput, setCityInput] = useState(() => getInitialQueryValue("city"));
+  const [companyInput, setCompanyInput] = useState(() =>
+    getInitialQueryValue("company"),
+  );
+  const [keyword, setKeyword] = useState(() => getInitialQueryValue("keyword"));
+  const [city, setCity] = useState(() => getInitialQueryValue("city"));
+  const [company, setCompany] = useState(() => getInitialQueryValue("company"));
   const [source, setSource] = useState(getInitialSource);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(getInitialPage);
   const [data, setData] = useState<AdminJobsResponse>(emptyJobsResponse);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -101,6 +157,10 @@ export default function AdminJobsPage() {
 
       if (city) {
         params.set("city", city);
+      }
+
+      if (company) {
+        params.set("company", company);
       }
 
       if (source) {
@@ -146,45 +206,68 @@ export default function AdminJobsPage() {
     return () => {
       isActive = false;
     };
-  }, [city, keyword, page, refreshToken, source]);
+  }, [city, company, keyword, page, refreshToken, source]);
 
-  function updateSourceQuery(nextSource: string) {
-    const params = new URLSearchParams(window.location.search);
-
-    if (nextSource) {
-      params.set("source", nextSource);
-    } else {
-      params.delete("source");
-    }
-
-    const queryString = params.toString();
-    const nextUrl = queryString ? `/admin/jobs?${queryString}` : "/admin/jobs";
-
-    window.history.pushState(null, "", nextUrl);
+  function updateJobsQuery(queryState: JobsQueryState) {
+    window.history.pushState(null, "", buildJobsUrl(queryState));
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setKeyword(keywordInput.trim());
-    setCity(cityInput.trim());
+    const nextKeyword = keywordInput.trim();
+    const nextCity = cityInput.trim();
+    const nextCompany = companyInput.trim();
+
+    setKeyword(nextKeyword);
+    setCity(nextCity);
+    setCompany(nextCompany);
     setPage(1);
+    setSelectedJobIds([]);
+    updateJobsQuery({
+      keyword: nextKeyword,
+      city: nextCity,
+      company: nextCompany,
+      source,
+      page: 1,
+    });
   }
 
   function handleReset() {
     setKeywordInput("");
     setCityInput("");
+    setCompanyInput("");
     setKeyword("");
     setCity("");
+    setCompany("");
     setSource("");
     setPage(1);
-    updateSourceQuery("");
+    setSelectedJobIds([]);
+    window.history.pushState(null, "", "/admin/jobs");
   }
 
   function handleSourceChange(nextSource: string) {
     setSource(nextSource);
     setSelectedJobIds([]);
     setPage(1);
-    updateSourceQuery(nextSource);
+    updateJobsQuery({
+      keyword,
+      city,
+      company,
+      source: nextSource,
+      page: 1,
+    });
+  }
+
+  function handlePageChange(nextPage: number) {
+    setPage(nextPage);
+    setSelectedJobIds([]);
+    updateJobsQuery({
+      keyword,
+      city,
+      company,
+      source,
+      page: nextPage,
+    });
   }
 
   function toggleJobSelection(jobId: string) {
@@ -237,7 +320,7 @@ export default function AdminJobsPage() {
       }
 
       if (data.jobs.length === 1 && page > 1) {
-        setPage((currentPage) => Math.max(1, currentPage - 1));
+        handlePageChange(Math.max(1, page - 1));
       } else {
         setRefreshToken((currentToken) => currentToken + 1);
       }
@@ -284,7 +367,7 @@ export default function AdminJobsPage() {
       setSelectedJobIds([]);
 
       if (selectedJobIds.length >= data.jobs.length && page > 1) {
-        setPage((currentPage) => Math.max(1, currentPage - 1));
+        handlePageChange(Math.max(1, page - 1));
       } else {
         setRefreshToken((currentToken) => currentToken + 1);
       }
@@ -332,7 +415,7 @@ export default function AdminJobsPage() {
 
         <section className="mt-10 rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
           <form
-            className="grid gap-5 md:grid-cols-[1fr_1fr_1fr_auto]"
+            className="grid gap-5 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto]"
             onSubmit={handleSubmit}
           >
             <label className="block">
@@ -354,6 +437,17 @@ export default function AdminJobsPage() {
                 placeholder="例如 上海"
                 type="text"
                 value={cityInput}
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">公司</span>
+              <input
+                className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/15"
+                onChange={(event) => setCompanyInput(event.target.value)}
+                placeholder="例如 测试科技"
+                type="text"
+                value={companyInput}
               />
             </label>
 
@@ -387,7 +481,7 @@ export default function AdminJobsPage() {
                 onClick={handleReset}
                 type="button"
               >
-                重置
+                清空筛选
               </button>
             </div>
           </form>
@@ -532,7 +626,7 @@ export default function AdminJobsPage() {
               <button
                 className="rounded-md border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/10 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isLoading || !canGoPrevious}
-                onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
+                onClick={() => handlePageChange(Math.max(1, page - 1))}
                 type="button"
               >
                 上一页
@@ -540,11 +634,7 @@ export default function AdminJobsPage() {
               <button
                 className="rounded-md bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isLoading || !canGoNext}
-                onClick={() =>
-                  setPage((currentPage) =>
-                    Math.min(data.totalPages, currentPage + 1),
-                  )
-                }
+                onClick={() => handlePageChange(Math.min(data.totalPages, page + 1))}
                 type="button"
               >
                 下一页
