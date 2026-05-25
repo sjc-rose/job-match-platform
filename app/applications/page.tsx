@@ -1,11 +1,19 @@
 import Link from "next/link";
 import {
+  applicationStatuses,
+  applicationStatusLabels,
   getApplicationStatusLabel,
+  toApplicationStatus,
   type ApplicationStatus,
 } from "@/lib/applicationStatus";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
+
+type CountGroup = {
+  label: string;
+  count: number;
+};
 
 function formatDate(value: Date | null) {
   if (!value) {
@@ -50,6 +58,68 @@ function getStatusClassName(status: ApplicationStatus | string) {
   return "bg-amber-50 text-amber-700";
 }
 
+function normalizeLabel(value: string | null | undefined) {
+  const label = value?.trim();
+  return label || "未设置";
+}
+
+function getTopGroups(values: string[]) {
+  const groupMap = new Map<string, number>();
+
+  values.forEach((value) => {
+    const label = normalizeLabel(value);
+    groupMap.set(label, (groupMap.get(label) ?? 0) + 1);
+  });
+
+  return [...groupMap.entries()]
+    .map<CountGroup>(([label, count]) => ({
+      label,
+      count,
+    }))
+    .sort((firstItem, secondItem) => {
+      if (secondItem.count !== firstItem.count) {
+        return secondItem.count - firstItem.count;
+      }
+
+      return firstItem.label.localeCompare(secondItem.label, "zh-CN");
+    })
+    .slice(0, 10);
+}
+
+function RankingList({
+  emptyText,
+  items,
+}: {
+  emptyText: string;
+  items: CountGroup[];
+}) {
+  if (items.length === 0) {
+    return (
+      <div className="rounded-md bg-slate-50 px-4 py-5 text-sm text-slate-500">
+        {emptyText}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((item) => (
+        <div
+          className="flex items-center justify-between gap-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-3"
+          key={item.label}
+        >
+          <span className="min-w-0 truncate text-sm font-semibold text-slate-800">
+            {item.label}
+          </span>
+          <span className="rounded-md bg-white px-3 py-1 text-sm font-bold text-slate-950">
+            {item.count}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default async function ApplicationsPage() {
   const applications = await prisma.applicationRecord.findMany({
     include: {
@@ -66,6 +136,42 @@ export default async function ApplicationsPage() {
       updatedAt: "desc",
     },
   });
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const statusCounts = Object.fromEntries(
+    applicationStatuses.map((status) => [status, 0]),
+  ) as Record<ApplicationStatus, number>;
+
+  applications.forEach((application) => {
+    const status = toApplicationStatus(application.status);
+    statusCounts[status] += 1;
+  });
+
+  const recentSevenDayCount = applications.filter(
+    (application) => application.updatedAt >= sevenDaysAgo,
+  ).length;
+  const recentApplications = applications.slice(0, 5);
+  const cityStats = getTopGroups(
+    applications.map((application) => application.job.city),
+  );
+  const companyStats = getTopGroups(
+    applications.map((application) => application.job.company),
+  );
+  const summaryCards = [
+    {
+      label: "总申请记录数",
+      value: applications.length,
+    },
+    ...applicationStatuses.map((status) => ({
+      label: `${applicationStatusLabels[status]}数量`,
+      value: statusCounts[status],
+    })),
+    {
+      label: "最近 7 天更新",
+      value: recentSevenDayCount,
+    },
+  ];
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950 sm:px-10">
@@ -91,6 +197,85 @@ export default async function ApplicationsPage() {
               我的收藏
             </Link>
           </div>
+        </section>
+
+        <section className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          {summaryCards.map((card) => (
+            <article
+              className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60"
+              key={card.label}
+            >
+              <p className="text-sm font-medium text-slate-500">{card.label}</p>
+              <p className="mt-3 text-4xl font-bold text-slate-950">
+                {card.value}
+              </p>
+            </article>
+          ))}
+        </section>
+
+        <section className="mt-10 grid gap-6 lg:grid-cols-3">
+          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60">
+            <h2 className="text-xl font-bold text-slate-950">
+              最近更新的 5 条
+            </h2>
+            <div className="mt-5 space-y-3">
+              {recentApplications.length > 0 ? (
+                recentApplications.map((application) => (
+                  <div
+                    className="rounded-md border border-slate-200 bg-slate-50 p-4"
+                    key={application.id}
+                  >
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <Link
+                          className="block truncate text-base font-bold text-teal-700 transition hover:text-teal-800"
+                          href={`/jobs/${application.jobId}`}
+                        >
+                          {application.job.title}
+                        </Link>
+                        <p className="mt-1 text-sm text-slate-600">
+                          {normalizeLabel(application.job.company)} ·{" "}
+                          {normalizeLabel(application.job.city)}
+                        </p>
+                      </div>
+                      <span
+                        className={`inline-flex w-fit rounded-md px-3 py-1 text-xs font-semibold ${getStatusClassName(
+                          application.status,
+                        )}`}
+                      >
+                        {getApplicationStatusLabel(application.status)}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-xs font-medium text-slate-500">
+                      更新于 {formatDateTime(application.updatedAt)}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-md bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                  暂无最近更新记录
+                </div>
+              )}
+            </div>
+          </article>
+
+          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60">
+            <h2 className="text-xl font-bold text-slate-950">
+              按 city 统计（前 10）
+            </h2>
+            <div className="mt-5">
+              <RankingList emptyText="暂无城市统计" items={cityStats} />
+            </div>
+          </article>
+
+          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60">
+            <h2 className="text-xl font-bold text-slate-950">
+              按 company 统计（前 10）
+            </h2>
+            <div className="mt-5">
+              <RankingList emptyText="暂无公司统计" items={companyStats} />
+            </div>
+          </article>
         </section>
 
         <section className="mt-10 rounded-lg border border-slate-200 bg-white shadow-lg shadow-slate-200/60">
@@ -127,10 +312,10 @@ export default async function ApplicationsPage() {
                         </Link>
                       </td>
                       <td className="px-6 py-4 text-slate-600">
-                        {application.job.company}
+                        {normalizeLabel(application.job.company)}
                       </td>
                       <td className="px-6 py-4 text-slate-600">
-                        {application.job.city}
+                        {normalizeLabel(application.job.city)}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4">
                         <span
