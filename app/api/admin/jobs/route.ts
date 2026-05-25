@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
+const jobStatuses = ["active", "inactive", "expired"] as const;
+
+type JobStatus = (typeof jobStatuses)[number];
 
 type JobRecord = {
   id: string;
@@ -14,6 +17,7 @@ type JobRecord = {
   company: string;
   city: string;
   province: string;
+  status: string;
   salaryMin: number | null;
   salaryMax: number | null;
   salaryText: string | null;
@@ -50,6 +54,12 @@ function parseString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function toJobStatus(value: unknown): JobStatus {
+  return jobStatuses.includes(value as JobStatus)
+    ? (value as JobStatus)
+    : "active";
+}
+
 function toApiJob(job: JobRecord) {
   return {
     id: job.id,
@@ -59,6 +69,7 @@ function toApiJob(job: JobRecord) {
     company: job.company,
     city: job.city,
     province: job.province,
+    status: job.status,
     salaryMin: job.salaryMin ?? 0,
     salaryMax: job.salaryMax ?? 0,
     salaryText: job.salaryText ?? "",
@@ -77,6 +88,7 @@ function createWhere(
   city: string,
   company: string,
   source: string,
+  status: string,
 ): Prisma.JobWhereInput {
   const conditions: Prisma.JobWhereInput[] = [];
 
@@ -129,6 +141,12 @@ function createWhere(
     });
   }
 
+  if (status) {
+    conditions.push({
+      status,
+    });
+  }
+
   return conditions.length > 0
     ? {
         AND: conditions,
@@ -143,13 +161,14 @@ export async function GET(request: Request) {
     const city = searchParams.get("city")?.trim() ?? "";
     const company = searchParams.get("company")?.trim() ?? "";
     const source = searchParams.get("source")?.trim() ?? "";
+    const status = searchParams.get("status")?.trim() ?? "";
     const page = parsePositiveInteger(searchParams.get("page"), DEFAULT_PAGE);
     const requestedPageSize = parsePositiveInteger(
       searchParams.get("pageSize"),
       DEFAULT_PAGE_SIZE,
     );
     const pageSize = Math.min(requestedPageSize, MAX_PAGE_SIZE);
-    const where = createWhere(keyword, city, company, source);
+    const where = createWhere(keyword, city, company, source, status);
 
     const [total, jobs, sourceRows] = await Promise.all([
       prisma.job.count({
@@ -212,6 +231,7 @@ export async function POST(request: Request) {
     const description = parseString(body.description);
     const applyUrl = parseString(body.applyUrl);
     const source = parseString(body.source) || "manual";
+    const status = toJobStatus(body.status);
 
     if (
       !title ||
@@ -231,6 +251,7 @@ export async function POST(request: Request) {
     const job = await prisma.job.create({
       data: {
         source,
+        status,
         title,
         company,
         city,

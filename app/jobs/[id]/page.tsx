@@ -10,6 +10,11 @@ type JobDetailPageProps = {
   }>;
 };
 
+type JobDetail = Job & {
+  status: string;
+  isDatabaseJob: boolean;
+};
+
 function formatSalary(min: number, max: number) {
   if (min === 0 && max === 0) {
     return "薪资面议";
@@ -48,7 +53,19 @@ function formatSource(source: string) {
   return source === "china-mock" ? "国内示例数据" : source;
 }
 
-async function getDatabaseJob(id: string): Promise<Job | null> {
+function getStatusLabel(status: string) {
+  if (status === "inactive") {
+    return "已下线";
+  }
+
+  if (status === "expired") {
+    return "已过期";
+  }
+
+  return "招聘中";
+}
+
+async function getDatabaseJob(id: string): Promise<JobDetail | null> {
   const job = await prisma.job.findUnique({
     where: {
       id,
@@ -66,6 +83,7 @@ async function getDatabaseJob(id: string): Promise<Job | null> {
     company: job.company,
     city: job.city,
     province: job.province,
+    status: job.status,
     salaryMin: job.salaryMin ?? 0,
     salaryMax: job.salaryMax ?? 0,
     salaryText: job.salaryText ?? "",
@@ -74,12 +92,23 @@ async function getDatabaseJob(id: string): Promise<Job | null> {
     description: job.description,
     applyUrl: job.applyUrl,
     publishedAt: job.publishedAt?.toISOString() ?? "",
+    isDatabaseJob: true,
   };
 }
 
 export default async function JobDetailPage({ params }: JobDetailPageProps) {
   const { id } = await params;
-  const job = (await getDatabaseJob(id)) ?? (await chinaMockProvider.getJobById(id));
+  const databaseJob = await getDatabaseJob(id);
+  const mockJob = databaseJob ? undefined : await chinaMockProvider.getJobById(id);
+  const job: JobDetail | null = databaseJob
+    ? databaseJob
+    : mockJob
+      ? {
+          ...mockJob,
+          status: "active",
+          isDatabaseJob: false,
+        }
+      : null;
 
   if (!job) {
     return (
@@ -100,6 +129,8 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
     );
   }
 
+  const isUnavailable = job.isDatabaseJob && job.status !== "active";
+
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950 sm:px-10">
       <article className="mx-auto max-w-4xl rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70 sm:p-8">
@@ -116,6 +147,12 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
             {job.salaryText || formatSalary(job.salaryMin, job.salaryMax)}
           </div>
         </div>
+
+        {isUnavailable ? (
+          <div className="mt-6 rounded-md bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-700">
+            该职位已下线或已过期，暂不支持收藏或申请。
+          </div>
+        ) : null}
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="rounded-md bg-slate-50 px-4 py-4">
@@ -144,6 +181,12 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                 : `${job.experienceRequirement} 年以上`}
             </dd>
           </div>
+          <div className="rounded-md bg-slate-50 px-4 py-4">
+            <dt className="text-sm text-slate-500">职位状态</dt>
+            <dd className="mt-1 text-base font-semibold text-slate-900">
+              {getStatusLabel(job.status)}
+            </dd>
+          </div>
         </dl>
 
         <section className="mt-8">
@@ -159,15 +202,28 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
         </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <FavoriteButton jobId={job.id} />
-          <a
-            className="inline-flex justify-center rounded-md bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-950/20"
-            href={job.applyUrl}
-            rel="noreferrer"
-            target="_blank"
-          >
-            申请链接
-          </a>
+          {isUnavailable ? (
+            <>
+              <span className="inline-flex cursor-not-allowed justify-center rounded-md border border-slate-200 bg-slate-100 px-6 py-3 text-sm font-semibold text-slate-400">
+                收藏不可用
+              </span>
+              <span className="inline-flex cursor-not-allowed justify-center rounded-md bg-slate-200 px-6 py-3 text-sm font-semibold text-slate-500">
+                申请链接不可用
+              </span>
+            </>
+          ) : (
+            <>
+              <FavoriteButton jobId={job.id} />
+              <a
+                className="inline-flex justify-center rounded-md bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-950/20"
+                href={job.applyUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                申请链接
+              </a>
+            </>
+          )}
           <Link
             className="inline-flex justify-center rounded-md border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-950/10"
             href="/search"

@@ -18,7 +18,23 @@ type JobFormState = {
   description: string;
   applyUrl: string;
   source: string;
+  status: string;
 };
+
+const jobStatusOptions = [
+  {
+    value: "active",
+    label: "已上线",
+  },
+  {
+    value: "inactive",
+    label: "已停用",
+  },
+  {
+    value: "expired",
+    label: "已过期",
+  },
+] as const;
 
 type AdminJobResponse = {
   job: JobFormState & {
@@ -42,6 +58,7 @@ const initialFormState: JobFormState = {
   description: "",
   applyUrl: "",
   source: "manual",
+  status: "active",
 };
 
 const inputClassName =
@@ -68,6 +85,7 @@ function toFormState(data: AdminJobResponse): JobFormState {
     description: data.job.description,
     applyUrl: data.job.applyUrl,
     source: data.job.source,
+    status: data.job.status,
   };
 }
 
@@ -344,6 +362,21 @@ export default function EditAdminJobPage() {
                   type="text"
                   value={formState.source}
                 />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-medium text-slate-700">状态</span>
+                <select
+                  className={inputClassName}
+                  onChange={(event) => updateForm("status", event.target.value)}
+                  value={formState.status}
+                >
+                  {jobStatusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className="block md:col-span-2">

@@ -15,6 +15,7 @@ model Job {
   company               String
   city                  String
   province              String
+  status                String        @default("active")
   salaryMin             Int?          @map("salary_min")
   salaryMax             Int?          @map("salary_max")
   salaryText            String?       @map("salary_text")
@@ -29,6 +30,7 @@ model Job {
 
   @@unique([source, sourceJobId])
   @@index([source])
+  @@index([status])
   @@index([province, city])
   @@index([city])
   @@index([publishedAt])

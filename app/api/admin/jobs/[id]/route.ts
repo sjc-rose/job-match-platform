@@ -8,6 +8,10 @@ type AdminJobRouteProps = {
   }>;
 };
 
+const jobStatuses = ["active", "inactive", "expired"] as const;
+
+type JobStatus = (typeof jobStatuses)[number];
+
 type JobRecord = {
   id: string;
   source: string;
@@ -16,6 +20,7 @@ type JobRecord = {
   company: string;
   city: string;
   province: string;
+  status: string;
   salaryMin: number | null;
   salaryMax: number | null;
   salaryText: string | null;
@@ -42,6 +47,12 @@ function parseString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function toJobStatus(value: unknown): JobStatus {
+  return jobStatuses.includes(value as JobStatus)
+    ? (value as JobStatus)
+    : "active";
+}
+
 function toApiJob(job: JobRecord) {
   return {
     id: job.id,
@@ -51,6 +62,7 @@ function toApiJob(job: JobRecord) {
     company: job.company,
     city: job.city,
     province: job.province,
+    status: job.status,
     salaryMin: job.salaryMin ?? 0,
     salaryMax: job.salaryMax ?? 0,
     salaryText: job.salaryText ?? "",
@@ -122,6 +134,7 @@ export async function PATCH(request: Request, { params }: AdminJobRouteProps) {
     const description = parseString(body.description);
     const applyUrl = parseString(body.applyUrl);
     const source = parseString(body.source) || "manual";
+    const status = toJobStatus(body.status);
 
     if (
       !title ||
@@ -145,6 +158,7 @@ export async function PATCH(request: Request, { params }: AdminJobRouteProps) {
       },
       data: {
         source,
+        status,
         title,
         company,
         city,
