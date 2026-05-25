@@ -73,6 +73,9 @@ export function PublicNav() {
               <Link className={navLinkClassName} href="/profile">
                 我的资料
               </Link>
+              <Link className={navLinkClassName} href="/recommendations">
+                推荐职位
+              </Link>
               <Link className={navLinkClassName} href="/applications">
                 我的申请
               </Link>
