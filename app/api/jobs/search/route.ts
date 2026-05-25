@@ -13,6 +13,7 @@ type DatabaseJob = {
   company: string;
   city: string;
   province: string;
+  status: string;
   salaryMin: number | null;
   salaryMax: number | null;
   salaryText: string | null;
@@ -167,7 +168,11 @@ function createExperienceWhere(
 }
 
 function createDatabaseWhere(params: SearchJobsParams): Prisma.JobWhereInput {
-  const andConditions: Prisma.JobWhereInput[] = [];
+  const andConditions: Prisma.JobWhereInput[] = [
+    {
+      status: "active",
+    },
+  ];
   const keywordWhere = createKeywordWhere(params.keywords);
   const educationWhere = createEducationWhere(params.educationLevel);
   const salaryWhere = createSalaryWhere(params);
@@ -199,11 +204,9 @@ function createDatabaseWhere(params: SearchJobsParams): Prisma.JobWhereInput {
     andConditions.push(experienceWhere);
   }
 
-  return andConditions.length > 0
-    ? {
-        AND: andConditions,
-      }
-    : {};
+  return {
+    AND: andConditions,
+  };
 }
 
 function toApiJob(job: DatabaseJob): Job {
@@ -214,6 +217,7 @@ function toApiJob(job: DatabaseJob): Job {
     company: job.company,
     city: job.city,
     province: job.province,
+    status: job.status,
     salaryMin: job.salaryMin ?? 0,
     salaryMax: job.salaryMax ?? 0,
     salaryText: job.salaryText ?? "",

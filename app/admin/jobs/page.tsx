@@ -11,6 +11,7 @@ type AdminJob = {
   company: string;
   city: string;
   province: string;
+  status: string;
   salaryMin: number;
   salaryMax: number;
   salaryText: string;
@@ -36,6 +37,39 @@ const emptyJobsResponse: AdminJobsResponse = {
   pageSize: DEFAULT_PAGE_SIZE,
   totalPages: 1,
 };
+
+const jobStatusOptions = [
+  {
+    value: "active",
+    label: "已上线",
+  },
+  {
+    value: "inactive",
+    label: "已停用",
+  },
+  {
+    value: "expired",
+    label: "已过期",
+  },
+] as const;
+
+function getStatusLabel(status: string) {
+  return (
+    jobStatusOptions.find((option) => option.value === status)?.label ?? status
+  );
+}
+
+function getStatusClassName(status: string) {
+  if (status === "active") {
+    return "bg-emerald-50 text-emerald-700";
+  }
+
+  if (status === "expired") {
+    return "bg-amber-50 text-amber-700";
+  }
+
+  return "bg-slate-100 text-slate-600";
+}
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -94,6 +128,7 @@ type JobsQueryState = {
   city: string;
   company: string;
   source: string;
+  status: string;
   page: number;
 };
 
@@ -102,6 +137,10 @@ function buildJobsUrl(queryState: JobsQueryState) {
 
   if (queryState.source) {
     params.set("source", queryState.source);
+  }
+
+  if (queryState.status) {
+    params.set("status", queryState.status);
   }
 
   if (queryState.keyword) {
@@ -133,6 +172,7 @@ export default function AdminJobsPage() {
   const [city, setCity] = useState(() => getInitialQueryValue("city"));
   const [company, setCompany] = useState(() => getInitialQueryValue("company"));
   const [source, setSource] = useState(getInitialSource);
+  const [status, setStatus] = useState(() => getInitialQueryValue("status"));
   const [page, setPage] = useState(getInitialPage);
   const [data, setData] = useState<AdminJobsResponse>(emptyJobsResponse);
   const [isLoading, setIsLoading] = useState(true);
@@ -165,6 +205,10 @@ export default function AdminJobsPage() {
 
       if (source) {
         params.set("source", source);
+      }
+
+      if (status) {
+        params.set("status", status);
       }
 
       setIsLoading(true);
@@ -206,7 +250,7 @@ export default function AdminJobsPage() {
     return () => {
       isActive = false;
     };
-  }, [city, company, keyword, page, refreshToken, source]);
+  }, [city, company, keyword, page, refreshToken, source, status]);
 
   function updateJobsQuery(queryState: JobsQueryState) {
     window.history.pushState(null, "", buildJobsUrl(queryState));
@@ -228,6 +272,7 @@ export default function AdminJobsPage() {
       city: nextCity,
       company: nextCompany,
       source,
+      status,
       page: 1,
     });
   }
@@ -240,6 +285,7 @@ export default function AdminJobsPage() {
     setCity("");
     setCompany("");
     setSource("");
+    setStatus("");
     setPage(1);
     setSelectedJobIds([]);
     window.history.pushState(null, "", "/admin/jobs");
@@ -254,6 +300,21 @@ export default function AdminJobsPage() {
       city,
       company,
       source: nextSource,
+      status,
+      page: 1,
+    });
+  }
+
+  function handleStatusChange(nextStatus: string) {
+    setStatus(nextStatus);
+    setSelectedJobIds([]);
+    setPage(1);
+    updateJobsQuery({
+      keyword,
+      city,
+      company,
+      source,
+      status: nextStatus,
       page: 1,
     });
   }
@@ -266,6 +327,7 @@ export default function AdminJobsPage() {
       city,
       company,
       source,
+      status,
       page: nextPage,
     });
   }
@@ -403,7 +465,7 @@ export default function AdminJobsPage() {
             职位管理
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-            按关键词和城市筛选数据库中的职位记录。
+            按关键词、城市、公司、来源和状态筛选数据库中的职位记录。
           </p>
           <Link
             className="mt-6 inline-flex justify-center rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
@@ -415,7 +477,7 @@ export default function AdminJobsPage() {
 
         <section className="mt-10 rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
           <form
-            className="grid gap-5 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto]"
+            className="grid gap-5 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]"
             onSubmit={handleSubmit}
           >
             <label className="block">
@@ -464,6 +526,24 @@ export default function AdminJobsPage() {
                 {data.sources.map((sourceValue) => (
                   <option key={sourceValue} value={sourceValue}>
                     {sourceValue}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">
+                职位状态
+              </span>
+              <select
+                className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/15"
+                onChange={(event) => handleStatusChange(event.target.value)}
+                value={status}
+              >
+                <option value="">全部状态</option>
+                {jobStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
@@ -540,13 +620,14 @@ export default function AdminJobsPage() {
                   <th className="px-6 py-4 font-semibold">学历要求</th>
                   <th className="px-6 py-4 font-semibold">经验要求</th>
                   <th className="px-6 py-4 font-semibold">发布时间</th>
+                  <th className="px-6 py-4 font-semibold">状态</th>
                   <th className="px-6 py-4 font-semibold">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 bg-white">
                 {isLoading ? (
                   <tr>
-                    <td className="px-6 py-8 text-center text-slate-500" colSpan={9}>
+                    <td className="px-6 py-8 text-center text-slate-500" colSpan={10}>
                       正在加载职位...
                     </td>
                   </tr>
@@ -582,6 +663,15 @@ export default function AdminJobsPage() {
                         {formatDate(job.publishedAt)}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4">
+                        <span
+                          className={`inline-flex rounded-md px-3 py-1 text-xs font-semibold ${getStatusClassName(
+                            job.status,
+                          )}`}
+                        >
+                          {getStatusLabel(job.status)}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4">
                         <div className="flex items-center gap-3">
                           <Link
                             className="font-semibold text-teal-700 transition hover:text-teal-800"
@@ -609,7 +699,7 @@ export default function AdminJobsPage() {
                   ))
                 ) : (
                   <tr>
-                    <td className="px-6 py-8 text-center text-slate-500" colSpan={9}>
+                    <td className="px-6 py-8 text-center text-slate-500" colSpan={10}>
                       暂无职位记录
                     </td>
                   </tr>
