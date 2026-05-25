@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ApplicationTracker } from "@/components/ApplicationTracker";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { JobMatchScorePanel } from "@/components/JobMatchScorePanel";
 import { PublicNav } from "@/components/PublicNav";
 import { prisma } from "@/lib/prisma";
 import { chinaMockProvider } from "@/lib/providers/chinaMockProvider";
@@ -160,6 +161,8 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
             该职位已下线或已过期，暂不支持收藏或申请。
           </div>
         ) : null}
+
+        <JobMatchScorePanel job={job} />
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="rounded-md bg-slate-50 px-4 py-4">
