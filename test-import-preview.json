@@ -1,0 +1,18 @@
+[
+  {
+    "title": "预览测试JSON职位1",
+    "company": "测试公司A",
+    "province": "广东",
+    "city": "深圳",
+    "salary": "10k-15k",
+    "source": "preview-json-test"
+  },
+  {
+    "title": "预览测试JSON职位2",
+    "company": "测试公司B",
+    "province": "上海",
+    "city": "上海",
+    "salary": "15k-20k",
+    "source": "preview-json-test"
+  }
+]

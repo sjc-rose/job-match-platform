@@ -14,6 +14,7 @@ type ImportResult = {
 };
 
 type ImportMode = "json" | "csv";
+type ImportJob = Record<string, unknown>;
 
 const csvHeaders = [
   "title",
@@ -152,38 +153,137 @@ function parseCsvJobs(csvText: string) {
   );
 }
 
+function isImportJob(value: unknown): value is ImportJob {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseJsonJobs(jsonText: string) {
+  const parsedJobs = JSON.parse(jsonText) as unknown;
+
+  if (!Array.isArray(parsedJobs)) {
+    throw new Error("请粘贴 JSON 职位数组");
+  }
+
+  return parsedJobs.map((job, index) => {
+    if (!isImportJob(job)) {
+      throw new Error(`第 ${index + 1} 条职位必须是对象`);
+    }
+
+    return job;
+  });
+}
+
+function parseImportJobs(importMode: ImportMode, text: string) {
+  return importMode === "json" ? parseJsonJobs(text) : parseCsvJobs(text);
+}
+
+function getPreviewText(job: ImportJob, field: string) {
+  const value = job[field];
+
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  return String(value);
+}
+
+function formatPreviewSalary(job: ImportJob) {
+  const salaryText = getPreviewText(job, "salaryText");
+
+  if (salaryText) {
+    return salaryText;
+  }
+
+  const salaryMin = getPreviewText(job, "salaryMin");
+  const salaryMax = getPreviewText(job, "salaryMax");
+
+  if (!salaryMin && !salaryMax) {
+    return "未填写";
+  }
+
+  return `${salaryMin || "0"}-${salaryMax || "0"} 元/月`;
+}
+
 export default function AdminImportPage() {
   const [importMode, setImportMode] = useState<ImportMode>("json");
   const [jsonText, setJsonText] = useState(exampleText);
   const [csvText, setCsvText] = useState(csvExample);
+  const [previewJobs, setPreviewJobs] = useState<ImportJob[]>([]);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState("");
+  const [isPreviewReady, setIsPreviewReady] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const currentText = importMode === "json" ? jsonText : csvText;
+
+  function resetPreview() {
+    setPreviewJobs([]);
+    setIsPreviewReady(false);
+    setResult(null);
+  }
+
+  async function handleFileChange(file: File | undefined) {
+    if (!file) {
+      return;
+    }
+
+    try {
+      const fileText = await file.text();
+
+      if (importMode === "json") {
+        setJsonText(fileText);
+      } else {
+        setCsvText(fileText);
+      }
+
+      setSelectedFileName(file.name);
+      setErrorMessage("");
+      resetPreview();
+    } catch {
+      setErrorMessage("文件读取失败，请重新选择文件");
+    }
+  }
+
+  function handlePreview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setErrorMessage("");
+    setResult(null);
+
+    try {
+      const parsedJobs = parseImportJobs(importMode, currentText);
+
+      if (parsedJobs.length === 0) {
+        throw new Error("没有可预览的职位数据");
+      }
+
+      setPreviewJobs(parsedJobs);
+      setIsPreviewReady(true);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "解析失败，请检查内容后重试",
+      );
+      resetPreview();
+    }
+  }
+
+  async function handleConfirmImport() {
+    if (previewJobs.length === 0) {
+      setErrorMessage("请先预览导入内容");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage("");
     setResult(null);
 
     try {
-      const parsedJobs =
-        importMode === "json"
-          ? (JSON.parse(jsonText) as unknown)
-          : parseCsvJobs(csvText);
-
-      if (!Array.isArray(parsedJobs)) {
-        throw new Error(
-          importMode === "json" ? "请粘贴 JSON 职位数组" : "请粘贴 CSV 职位数据",
-        );
-      }
-
       const response = await fetch("/api/admin/import", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(parsedJobs),
+        body: JSON.stringify(previewJobs),
       });
 
       if (!response.ok) {
@@ -192,6 +292,7 @@ export default function AdminImportPage() {
 
       const importResult = (await response.json()) as ImportResult;
       setResult(importResult);
+      setIsPreviewReady(false);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "导入失败，请稍后重试",
@@ -224,7 +325,7 @@ export default function AdminImportPage() {
 
         <section className="mt-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handlePreview}>
               <div className="mb-5 inline-flex rounded-md border border-slate-200 bg-slate-50 p-1">
                 <button
                   className={`rounded px-4 py-2 text-sm font-semibold transition ${
@@ -234,8 +335,9 @@ export default function AdminImportPage() {
                   }`}
                   onClick={() => {
                     setImportMode("json");
-                    setResult(null);
+                    setSelectedFileName("");
                     setErrorMessage("");
+                    resetPreview();
                   }}
                   type="button"
                 >
@@ -249,8 +351,9 @@ export default function AdminImportPage() {
                   }`}
                   onClick={() => {
                     setImportMode("csv");
-                    setResult(null);
+                    setSelectedFileName("");
                     setErrorMessage("");
+                    resetPreview();
                   }}
                   type="button"
                 >
@@ -258,18 +361,43 @@ export default function AdminImportPage() {
                 </button>
               </div>
 
+              <label className="mb-5 block">
+                <span className="text-sm font-medium text-slate-700">
+                  选择 {importMode === "json" ? "JSON" : "CSV"} 文件
+                </span>
+                <input
+                  accept={importMode === "json" ? ".json,application/json" : ".csv,text/csv"}
+                  className="mt-2 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-teal-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-teal-700 hover:file:bg-teal-100 focus:outline-none focus:ring-4 focus:ring-teal-600/15"
+                  onChange={(event) => {
+                    void handleFileChange(event.target.files?.[0]);
+                    event.currentTarget.value = "";
+                  }}
+                  type="file"
+                />
+                {selectedFileName ? (
+                  <span className="mt-2 block text-xs font-medium text-slate-500">
+                    已选择：{selectedFileName}
+                  </span>
+                ) : null}
+              </label>
+
               <label className="block">
                 <span className="text-sm font-medium text-slate-700">
                   {importMode === "json" ? "JSON 职位数组" : "CSV 职位数据"}
                 </span>
                 <textarea
                   className="mt-2 min-h-[520px] w-full rounded-md border border-slate-300 bg-white px-3 py-3 font-mono text-sm text-slate-950 outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/15"
-                  onChange={(event) =>
-                    importMode === "json"
-                      ? setJsonText(event.target.value)
-                      : setCsvText(event.target.value)
-                  }
-                  value={importMode === "json" ? jsonText : csvText}
+                  onChange={(event) => {
+                    if (importMode === "json") {
+                      setJsonText(event.target.value);
+                    } else {
+                      setCsvText(event.target.value);
+                    }
+
+                    setErrorMessage("");
+                    resetPreview();
+                  }}
+                  value={currentText}
                 />
               </label>
 
@@ -285,7 +413,7 @@ export default function AdminImportPage() {
                   disabled={isSubmitting}
                   type="submit"
                 >
-                  {isSubmitting ? "正在导入..." : "导入"}
+                  预览导入
                 </button>
                 <button
                   className="inline-flex justify-center rounded-md border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-950/10"
@@ -296,13 +424,23 @@ export default function AdminImportPage() {
                       setCsvText(csvExample);
                     }
 
-                    setResult(null);
+                    setSelectedFileName("");
                     setErrorMessage("");
+                    resetPreview();
                   }}
                   type="button"
                 >
                   填入示例
                 </button>
+                {isPreviewReady ? (
+                  <button
+                    className="inline-flex justify-center rounded-md border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-950/10"
+                    onClick={resetPreview}
+                    type="button"
+                  >
+                    取消预览
+                  </button>
+                ) : null}
               </div>
             </form>
           </article>
@@ -368,6 +506,67 @@ export default function AdminImportPage() {
             </section>
           </aside>
         </section>
+
+        {previewJobs.length > 0 ? (
+          <section className="mt-10 rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-950">导入预览</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  将要导入 {previewJobs.length} 个职位，下面展示前{" "}
+                  {Math.min(previewJobs.length, 20)} 条。
+                </p>
+              </div>
+              <button
+                className="inline-flex justify-center rounded-md bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSubmitting}
+                onClick={handleConfirmImport}
+                type="button"
+              >
+                {isSubmitting ? "正在导入..." : "确认导入"}
+              </button>
+            </div>
+
+            <div className="mt-6 overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">职位标题</th>
+                    <th className="px-4 py-3 font-semibold">公司</th>
+                    <th className="px-4 py-3 font-semibold">城市</th>
+                    <th className="px-4 py-3 font-semibold">省份</th>
+                    <th className="px-4 py-3 font-semibold">薪资</th>
+                    <th className="px-4 py-3 font-semibold">来源</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {previewJobs.slice(0, 20).map((job, index) => (
+                    <tr className="transition hover:bg-slate-50" key={index}>
+                      <td className="max-w-xs px-4 py-3 font-semibold text-slate-950">
+                        {getPreviewText(job, "title") || "未填写"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {getPreviewText(job, "company") || "未填写"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {getPreviewText(job, "city") || "未填写"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {getPreviewText(job, "province") || "未填写"}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                        {formatPreviewSalary(job)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                        {getPreviewText(job, "source") || "manual-import"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
       </div>
     </main>
   );
