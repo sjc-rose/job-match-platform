@@ -176,6 +176,12 @@ export default function AdminPage() {
             >
               导入职位
             </Link>
+            <Link
+              className="inline-flex justify-center rounded-md border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-950/10"
+              href="/admin/sources"
+            >
+              数据源管理
+            </Link>
           </div>
         </section>
 
