@@ -70,6 +70,9 @@ export function PublicNav() {
           </Link>
           {isLoading ? null : user ? (
             <>
+              <Link className={navLinkClassName} href="/profile">
+                我的资料
+              </Link>
               <Link className={navLinkClassName} href="/applications">
                 我的申请
               </Link>
