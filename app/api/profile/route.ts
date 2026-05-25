@@ -75,9 +75,9 @@ function parseProfilePayload(body: Record<string, unknown>) {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const { response, user } = await requireCurrentUser();
+    const { response, user } = await requireCurrentUser(request);
 
     if (response) {
       return response;
@@ -103,7 +103,7 @@ export async function GET() {
 
 async function saveProfile(request: Request) {
   try {
-    const { response, user } = await requireCurrentUser();
+    const { response, user } = await requireCurrentUser(request);
 
     if (response) {
       return response;

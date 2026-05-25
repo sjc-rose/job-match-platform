@@ -6,6 +6,8 @@ import { FavoriteButton } from "@/components/FavoriteButton";
 import { PublicNav } from "@/components/PublicNav";
 import type { JobMatch, UserProfile } from "@/lib/matching";
 import { educationLevels } from "@/lib/providers/types";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 const initialProfile: UserProfile = {
   educationLevel: "本科",
@@ -17,8 +19,18 @@ const initialProfile: UserProfile = {
 };
 
 type SearchResponse = {
-  source: "china-mock";
-  jobs: JobMatch[];
+  source: string;
+  jobs: SearchResultMatch[];
+};
+
+type ProfileMatch = {
+  state: "unauthenticated" | "missing" | "ready";
+  score: number | null;
+  reasons: string[];
+};
+
+type SearchResultMatch = JobMatch & {
+  profileMatch?: ProfileMatch;
 };
 
 type SearchHistoryItem = UserProfile & {
@@ -79,9 +91,72 @@ function toProfileFromHistory(history: SearchHistoryItem): UserProfile {
   };
 }
 
+async function getSearchRequestHeaders() {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (!isSupabaseConfigured()) {
+    return headers;
+  }
+
+  const supabase = createSupabaseBrowserClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (session) {
+    headers.Authorization = `Bearer ${session.access_token}`;
+  }
+
+  return headers;
+}
+
+function renderProfileMatch(profileMatch: ProfileMatch | undefined) {
+  if (!profileMatch || profileMatch.state === "unauthenticated") {
+    return (
+      <p className="mt-2 text-sm font-semibold text-teal-700">
+        登录后查看匹配度
+      </p>
+    );
+  }
+
+  if (profileMatch.state === "missing" || profileMatch.score === null) {
+    return (
+      <p className="mt-2 text-sm font-semibold text-teal-700">
+        完善求职偏好后查看匹配度{" "}
+        <Link
+          className="underline decoration-teal-500 underline-offset-4"
+          href="/profile"
+        >
+          去完善资料
+        </Link>
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <p className="mt-2 text-2xl font-bold text-teal-800">
+        匹配度 {profileMatch.score}%
+      </p>
+      <div className="mt-3">
+        <p className="text-sm font-semibold text-teal-900">推荐理由：</p>
+        <ul className="mt-2 space-y-2 text-sm text-teal-800">
+          {profileMatch.reasons.slice(0, 2).map((reason) => (
+            <li className="rounded-md bg-white/70 px-3 py-2" key={reason}>
+              - {reason}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </>
+  );
+}
+
 export default function SearchPage() {
   const [profile, setProfile] = useState<UserProfile>(initialProfile);
-  const [matches, setMatches] = useState<JobMatch[]>([]);
+  const [matches, setMatches] = useState<SearchResultMatch[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -198,9 +273,7 @@ export default function SearchPage() {
     try {
       const response = await fetch("/api/jobs/search", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await getSearchRequestHeaders(),
         body: JSON.stringify(searchProfile),
       });
 
@@ -489,6 +562,13 @@ export default function SearchPage() {
                         匹配分数 {matchScore}
                       </div>
                     </div>
+
+                    <section className="mt-5 rounded-md border border-teal-100 bg-teal-50 px-4 py-4">
+                      <h3 className="text-sm font-bold text-teal-900">
+                        个性化匹配度
+                      </h3>
+                      {renderProfileMatch(match.profileMatch)}
+                    </section>
 
                     <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
                       <div className="rounded-md bg-slate-50 px-4 py-3">

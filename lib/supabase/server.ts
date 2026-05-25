@@ -41,3 +41,25 @@ export async function getCurrentUser() {
 
   return user;
 }
+
+export async function getCurrentUserFromRequest(request?: Request) {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const authorization = request?.headers.get("authorization") ?? "";
+  const token = authorization.toLowerCase().startsWith("bearer ")
+    ? authorization.slice(7).trim()
+    : "";
+  const {
+    data: { user },
+    error,
+  } = token ? await supabase.auth.getUser(token) : await supabase.auth.getUser();
+
+  if (error) {
+    return null;
+  }
+
+  return user;
+}

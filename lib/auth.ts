@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentUserFromRequest } from "@/lib/supabase/server";
 
-export async function requireCurrentUser() {
-  const user = await getCurrentUser();
+export async function requireCurrentUser(request?: Request) {
+  const user = await getCurrentUserFromRequest(request);
 
   if (!user) {
     return {

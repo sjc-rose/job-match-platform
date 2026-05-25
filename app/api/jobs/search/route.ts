@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
+import { getCurrentUserFromRequest } from "@/lib/supabase/server";
+import { calculateMatchScore, type MatchScoreProfile } from "@/lib/matchScore";
 import { calculateJobMatches } from "@/lib/matching";
 import { prisma } from "@/lib/prisma";
 import { chinaMockProvider } from "@/lib/providers/chinaMockProvider";
@@ -23,6 +25,8 @@ type DatabaseJob = {
   applyUrl: string;
   publishedAt: Date | null;
 };
+
+type SearchMatch = ReturnType<typeof calculateJobMatches>[number];
 
 function toNumber(value: unknown, fallback = 0) {
   const numberValue = Number(value);
@@ -246,9 +250,61 @@ async function searchDatabaseJobs(params: SearchJobsParams) {
   return jobs.map(toApiJob);
 }
 
+async function getProfileForRequest(request: Request) {
+  const user = await getCurrentUserFromRequest(request);
+
+  if (!user) {
+    return {
+      state: "unauthenticated" as const,
+      profile: null,
+    };
+  }
+
+  const profile = await prisma.userProfile.findUnique({
+    where: {
+      userId: user.id,
+    },
+  });
+
+  return {
+    state: profile ? ("ready" as const) : ("missing" as const),
+    profile,
+  };
+}
+
+function withProfileMatches(
+  matches: SearchMatch[],
+  profileState: "unauthenticated" | "missing" | "ready",
+  profile: MatchScoreProfile | null,
+) {
+  return matches.map((match) => {
+    const profileMatch =
+      profileState === "ready"
+        ? calculateMatchScore(match.job, profile)
+        : {
+            score: null,
+            reasons: [
+              profileState === "unauthenticated"
+                ? "登录后查看匹配度"
+                : "完善求职偏好后查看匹配度",
+            ],
+          };
+
+    return {
+      ...match,
+      profileMatch: {
+        state: profileState,
+        score: profileMatch.score,
+        reasons: profileMatch.reasons,
+      },
+    };
+  });
+}
+
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const searchParams = parseSearchParams(body);
+  const { profile, state: profileState } = await getProfileForRequest(request);
   const databaseJobs = await searchDatabaseJobs(searchParams);
   const databaseMatches = calculateJobMatches(searchParams, databaseJobs).filter(
     (match) => match.matchScore > 0,
@@ -257,7 +313,7 @@ export async function POST(request: Request) {
   if (databaseMatches.length > 0) {
     return NextResponse.json({
       source: "database",
-      jobs: databaseMatches,
+      jobs: withProfileMatches(databaseMatches, profileState, profile),
     });
   }
 
@@ -268,6 +324,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     source: chinaMockProvider.source,
-    jobs: mockMatches,
+    jobs: withProfileMatches(mockMatches, profileState, profile),
   });
 }
