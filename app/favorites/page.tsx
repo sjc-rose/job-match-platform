@@ -264,7 +264,7 @@ export default function FavoritesPage() {
                       rel="noreferrer"
                       target="_blank"
                     >
-                      申请链接
+                      去申请
                     </a>
                   </div>
                 </article>

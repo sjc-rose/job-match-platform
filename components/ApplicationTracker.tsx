@@ -18,6 +18,7 @@ type ApplicationRecord = {
 };
 
 type ApplicationTrackerProps = {
+  applyUrl?: string;
   disabled?: boolean;
   disabledMessage?: string;
   jobId: string;
@@ -58,6 +59,7 @@ function formatDateTime(value: string) {
 }
 
 export function ApplicationTracker({
+  applyUrl,
   disabled = false,
   disabledMessage = "当前职位暂不支持申请状态管理。",
   jobId,
@@ -70,6 +72,7 @@ export function ApplicationTracker({
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const canApplyExternally = Boolean(applyUrl && applyUrl !== "#");
 
   useEffect(() => {
     if (disabled) {
@@ -181,12 +184,25 @@ export function ApplicationTracker({
     <section className="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-950">申请状态</h2>
+          <h2 className="text-xl font-bold text-slate-950">求职进度</h2>
           <p className="mt-1 text-sm text-slate-500">
             当前状态：{applicationStatusLabels[status]} · 最近更新：
             {formatDateTime(updatedAt)}
           </p>
+          <p className="mt-2 text-sm font-medium text-amber-700">
+            请在实际投递后手动更新状态。
+          </p>
         </div>
+        {!disabled && canApplyExternally ? (
+          <a
+            className="inline-flex w-fit justify-center rounded-md bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-950/20"
+            href={applyUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            去申请
+          </a>
+        ) : null}
       </div>
 
       {disabled ? (

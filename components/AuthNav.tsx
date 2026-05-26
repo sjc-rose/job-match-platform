@@ -59,7 +59,7 @@ export function AuthNav() {
     return (
       <>
         <Link className={linkClassName} href="/applications">
-          我的申请
+          求职进度
         </Link>
         <Link className={linkClassName} href="/favorites">
           收藏

@@ -17,7 +17,7 @@ export default function LoginPage() {
             </Link>
             <h1 className="mt-5 text-4xl font-bold tracking-tight">登录</h1>
             <p className="mt-4 text-sm leading-6 text-slate-600">
-              登录后可以保存收藏、申请状态和搜索记录。
+              登录后可以保存收藏、求职进度和搜索记录。
             </p>
           </div>
           <AuthForm mode="login" />

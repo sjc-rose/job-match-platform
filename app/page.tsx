@@ -59,7 +59,7 @@ export default async function Home() {
                   href="/applications"
                   className="inline-flex justify-center rounded-md border border-slate-300 bg-white px-7 py-3 text-base font-semibold text-slate-900 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-950/10"
                 >
-                  我的申请
+                  求职进度
                 </Link>
               </div>
               <p className="mt-6 text-sm font-medium text-slate-500">
@@ -92,7 +92,7 @@ export default async function Home() {
                 </p>
                 <p className="mt-3 text-3xl font-bold">搜索 · 推荐 · 跟踪</p>
                 <p className="mt-3 text-sm leading-6 text-slate-300">
-                  从职位发现到申请状态管理，围绕一个求职者账号沉淀完整流程。
+                  从职位发现到求职进度管理，围绕一个求职者账号沉淀完整流程。
                 </p>
               </div>
               <div className="mt-5 grid gap-3">

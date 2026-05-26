@@ -77,7 +77,7 @@ export function PublicNav() {
                 我的资料
               </Link>
               <Link className={navLinkClassName} href="/applications">
-                我的申请
+                求职进度
               </Link>
               <Link className={navLinkClassName} href="/favorites">
                 收藏

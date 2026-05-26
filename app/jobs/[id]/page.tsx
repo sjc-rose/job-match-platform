@@ -142,6 +142,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
   }
 
   const isUnavailable = job.isDatabaseJob && job.status !== "active";
+  const canApplyExternally = Boolean(job.applyUrl && job.applyUrl !== "#");
 
   return (
     <>
@@ -218,6 +219,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
         </p>
 
         <ApplicationTracker
+          applyUrl={canApplyExternally ? job.applyUrl : undefined}
           disabled={!job.isDatabaseJob || isUnavailable}
           disabledMessage={
             isUnavailable
@@ -234,20 +236,22 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                 收藏不可用
               </span>
               <span className="inline-flex cursor-not-allowed justify-center rounded-md bg-slate-200 px-6 py-3 text-sm font-semibold text-slate-500">
-                申请链接不可用
+                去申请不可用
               </span>
             </>
           ) : (
             <>
               <FavoriteButton jobId={job.id} />
-              <a
-                className="inline-flex justify-center rounded-md bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-950/20"
-                href={job.applyUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
-                申请链接
-              </a>
+              {canApplyExternally ? (
+                <a
+                  className="inline-flex justify-center rounded-md bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-950/20"
+                  href={job.applyUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  去申请
+                </a>
+              ) : null}
             </>
           )}
           <Link

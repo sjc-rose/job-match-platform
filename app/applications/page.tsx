@@ -132,10 +132,10 @@ export default async function ApplicationsPage() {
         <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-16 text-slate-950">
           <section className="w-full max-w-xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-xl shadow-slate-200/70">
             <h1 className="text-3xl font-bold tracking-tight">
-              登录后查看我的申请
+              登录后查看求职进度
             </h1>
             <p className="mt-4 text-sm leading-6 text-slate-600">
-              申请进度会按你的账号保存，登录后可以查看和管理所有申请记录。
+              求职进度会按你的账号保存，登录后可以查看和管理所有投递记录。
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
@@ -219,10 +219,13 @@ export default async function ApplicationsPage() {
         <div className="mx-auto max-w-6xl">
         <section className="text-center">
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            我的申请
+            求职进度
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
             跟踪已关注职位的申请进度、投递日期和备注。
+          </p>
+          <p className="mx-auto mt-3 max-w-2xl rounded-md bg-amber-50 px-4 py-3 text-sm font-medium leading-6 text-amber-800">
+            这里用于记录你在外部平台的投递进度，系统不会自动提交申请。
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
