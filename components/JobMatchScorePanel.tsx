@@ -18,6 +18,18 @@ type JobMatchScorePanelProps = {
   maxReasons?: number;
 };
 
+function getMatchScoreClassName(score: number) {
+  if (score >= 80) {
+    return "bg-emerald-50 text-emerald-700";
+  }
+
+  if (score >= 50) {
+    return "bg-teal-50 text-teal-700";
+  }
+
+  return "bg-amber-50 text-amber-700";
+}
+
 export function JobMatchScorePanel({
   job,
   maxReasons,
@@ -98,7 +110,7 @@ export function JobMatchScorePanel({
     : matchScore.reasons;
 
   return (
-    <section className="mt-5 rounded-md border border-teal-100 bg-teal-50 px-4 py-4">
+    <section className="mt-5 rounded-xl border border-teal-100 bg-teal-50 px-4 py-4">
       <h2 className="text-xl font-bold text-slate-950">个性化匹配度</h2>
       {profileState === "loading" ? (
         <p className="mt-2 text-sm font-semibold text-teal-700">
@@ -120,15 +132,22 @@ export function JobMatchScorePanel({
         </p>
       ) : (
         <>
-          <p className="mt-2 text-3xl font-bold text-teal-800">
+          <p
+            className={`mt-3 inline-flex rounded-full px-4 py-2 text-sm font-bold ${getMatchScoreClassName(
+              matchScore.score,
+            )}`}
+          >
             匹配度 {matchScore.score}%
           </p>
           <div className="mt-3">
             <p className="text-sm font-semibold text-teal-900">推荐理由：</p>
             <ul className="mt-2 space-y-2 text-sm text-teal-800">
               {visibleReasons.map((reason) => (
-                <li className="rounded-md bg-white/70 px-3 py-2" key={reason}>
-                  - {reason}
+                <li
+                  className="inline-flex rounded-full bg-white/80 px-3 py-1.5"
+                  key={reason}
+                >
+                  {reason}
                 </li>
               ))}
             </ul>

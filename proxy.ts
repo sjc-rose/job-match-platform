@@ -5,6 +5,7 @@ const ADMIN_LOGIN_PATH = "/admin/login";
 const PUBLIC_ADMIN_API_PATHS = new Set([
   "/api/admin/login",
   "/api/admin/logout",
+  "/api/admin/maintenance",
 ]);
 
 function isAuthenticated(request: NextRequest) {

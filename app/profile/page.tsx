@@ -50,7 +50,7 @@ export default async function ProfilePage() {
       <>
         <PublicNav />
         <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-16 text-slate-950">
-          <section className="w-full max-w-xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-xl shadow-slate-200/70">
+          <section className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             <h1 className="text-3xl font-bold tracking-tight">
               登录后编辑我的资料
             </h1>
@@ -97,7 +97,7 @@ export default async function ProfilePage() {
             </p>
           </section>
 
-          <section className="mt-10 rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
+          <section className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <UserProfileForm
               initialProfile={profile ? toFormState(profile) : emptyProfile}
             />

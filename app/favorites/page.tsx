@@ -151,11 +151,11 @@ export default function FavoritesPage() {
 
         <section className="mt-10">
           {isLoading ? (
-            <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-600 shadow-lg shadow-slate-200/60">
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600 shadow-sm">
               正在加载收藏职位，请稍候...
             </div>
           ) : isLoginRequired ? (
-            <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-lg shadow-slate-200/60">
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
               <p className="text-base font-semibold text-slate-900">
                 登录后查看收藏职位
               </p>
@@ -181,7 +181,7 @@ export default function FavoritesPage() {
             <div className="grid gap-5 lg:grid-cols-2">
               {favoriteJobs.map((job) => (
                 <article
-                  className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60"
+                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
                   key={job.id}
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -271,7 +271,7 @@ export default function FavoritesPage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-lg shadow-slate-200/60">
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
               <p className="text-base font-semibold text-slate-900">
                 暂无收藏职位
               </p>

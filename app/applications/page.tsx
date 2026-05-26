@@ -130,7 +130,7 @@ export default async function ApplicationsPage() {
       <>
         <PublicNav />
         <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-16 text-slate-950">
-          <section className="w-full max-w-xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-xl shadow-slate-200/70">
+          <section className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             <h1 className="text-3xl font-bold tracking-tight">
               登录后查看求职进度
             </h1>
@@ -246,7 +246,7 @@ export default async function ApplicationsPage() {
         <section className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           {summaryCards.map((card) => (
             <article
-              className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60"
+              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
               key={card.label}
             >
               <p className="text-sm font-medium text-slate-500">{card.label}</p>
@@ -258,7 +258,7 @@ export default async function ApplicationsPage() {
         </section>
 
         <section className="mt-10 grid gap-6 lg:grid-cols-3">
-          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60">
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-bold text-slate-950">
               最近更新的 5 条
             </h2>
@@ -303,7 +303,7 @@ export default async function ApplicationsPage() {
             </div>
           </article>
 
-          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60">
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-bold text-slate-950">
               按 city 统计（前 10）
             </h2>
@@ -312,7 +312,7 @@ export default async function ApplicationsPage() {
             </div>
           </article>
 
-          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60">
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-bold text-slate-950">
               按 company 统计（前 10）
             </h2>
@@ -322,7 +322,7 @@ export default async function ApplicationsPage() {
           </article>
         </section>
 
-        <section className="mt-10 rounded-lg border border-slate-200 bg-white shadow-lg shadow-slate-200/60">
+        <section className="mt-10 rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 p-6">
             <h2 className="text-xl font-bold text-slate-950">申请记录</h2>
             <p className="mt-1 text-sm text-slate-500">

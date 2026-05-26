@@ -53,7 +53,7 @@ export function PublicNav() {
 
   return (
     <header className="bg-slate-50 px-6 pt-6 text-slate-950 sm:px-10">
-      <nav className="mx-auto flex max-w-6xl flex-col gap-3 rounded-lg border border-slate-200 bg-white/95 px-4 py-3 shadow-lg shadow-slate-200/50 sm:flex-row sm:items-center sm:justify-between">
+      <nav className="mx-auto flex max-w-6xl flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <Link
           className="text-base font-bold text-slate-950 transition hover:text-teal-700"
           href="/"
