@@ -47,6 +47,7 @@
 - `/admin/import`：JSON / CSV 导入、导入前预览、数据源选择、去重和质量反馈
 - `/admin/sources`：数据源管理
 - `/admin/stats`：后台统计面板
+- `/admin/maintenance`：系统维护和生产健康检查
 
 ## 数据库模型概览
 
@@ -67,6 +68,7 @@ DIRECT_URL=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ADMIN_PASSWORD=
+CRON_SECRET=
 ```
 
 说明：
@@ -76,6 +78,7 @@ ADMIN_PASSWORD=
 - `NEXT_PUBLIC_SUPABASE_URL`：Supabase 项目 URL。
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`：Supabase anon public key。
 - `ADMIN_PASSWORD`：后台管理密码；本地未设置时项目会使用开发默认密码。
+- `CRON_SECRET`：Vercel Cron 调用 `/api/admin/maintenance` 时使用的保护密钥。
 
 ## 本地运行
 
@@ -132,10 +135,40 @@ npm run prisma:studio
 ## Vercel 部署
 
 1. 在 Supabase 创建项目并准备 PostgreSQL 连接串。
-2. 在 Vercel 项目中配置环境变量：`DATABASE_URL`、`DIRECT_URL`、`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`ADMIN_PASSWORD`。
+2. 在 Vercel 项目中配置环境变量：`DATABASE_URL`、`DIRECT_URL`、`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`ADMIN_PASSWORD`、`CRON_SECRET`。
 3. 本地确认 migration 已执行到目标数据库。
 4. 推送到 GitHub 后由 Vercel 自动构建部署。
 5. 部署后检查 `/login`、`/search`、`/recommendations`、`/admin/login` 等关键页面。
+
+## Vercel Cron
+
+项目根目录的 `vercel.json` 已配置每天执行一次维护检查：
+
+```json
+{
+  "crons": [
+    {
+      "path": "/api/admin/maintenance",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}
+```
+
+时间为 UTC。Vercel 在设置 `CRON_SECRET` 后会自动用 `Authorization: Bearer <CRON_SECRET>` 调用 Cron endpoint。修改 `vercel.json` 或 Vercel 环境变量后需要重新部署。
+
+## Production Troubleshooting
+
+- 健康检查地址：`/api/health`。
+- 正常时会返回 `ok: true`、`database: "ok"`、`authEnv: "ok"` 和核心数据量。
+- 数据库不可达时会返回 `ok: false`、`database: "error"`、`message: "Database unavailable"`，不会暴露真实连接串或 secret。
+- Vercel 必须配置：`DATABASE_URL`、`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`ADMIN_PASSWORD`。
+- 如果启用 Cron，必须配置 `CRON_SECRET`。
+- 如果使用 Prisma migration，建议同时配置 `DIRECT_URL`。
+- 修改 Vercel 环境变量后必须 Redeploy，新变量才会进入运行时。
+- Prisma `P1001 Can't reach database server` 通常说明 `DATABASE_URL` 错误、数据库暂停、网络不可达或连接池地址不适合当前运行环境。
+- 查看错误：进入 Vercel Project → Logs，按请求路径筛选 `/api/health`、`/api/admin/maintenance` 或具体页面路径。
+- 后台维护页：登录 `/admin/login` 后访问 `/admin/maintenance`，点击“立即执行维护检查”查看数据库连接和数据质量状态。
 
 ## 常用命令
 

@@ -64,6 +64,18 @@ function getSourceLabel(source: string) {
   return `来源：${source}`;
 }
 
+function getMatchScoreClassName(score: number) {
+  if (score >= 80) {
+    return "bg-emerald-50 text-emerald-700";
+  }
+
+  if (score >= 50) {
+    return "bg-teal-50 text-teal-700";
+  }
+
+  return "bg-amber-50 text-amber-700";
+}
+
 function formatSearchTime(value: string) {
   const date = new Date(value);
 
@@ -137,15 +149,19 @@ function renderProfileMatch(profileMatch: ProfileMatch | undefined) {
 
   return (
     <>
-      <p className="mt-2 text-2xl font-bold text-teal-800">
+      <p
+        className={`mt-3 inline-flex rounded-full px-4 py-2 text-sm font-bold ${getMatchScoreClassName(
+          profileMatch.score,
+        )}`}
+      >
         匹配度 {profileMatch.score}%
       </p>
       <div className="mt-3">
         <p className="text-sm font-semibold text-teal-900">推荐理由：</p>
         <ul className="mt-2 space-y-2 text-sm text-teal-800">
           {profileMatch.reasons.slice(0, 2).map((reason) => (
-            <li className="rounded-md bg-white/70 px-3 py-2" key={reason}>
-              - {reason}
+            <li className="inline-flex rounded-full bg-white/80 px-3 py-1.5" key={reason}>
+              {reason}
             </li>
           ))}
         </ul>
@@ -353,7 +369,7 @@ export default function SearchPage() {
           </p>
         </section>
 
-        <section className="mt-10 rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
+        <section className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-xl font-bold text-slate-950">最近搜索</h2>
@@ -421,7 +437,7 @@ export default function SearchPage() {
           </div>
         </section>
 
-        <section className="mt-10 rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
+        <section className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <form
             className="grid gap-5 md:grid-cols-2 lg:grid-cols-3"
             onSubmit={handleSubmit}
@@ -548,7 +564,7 @@ export default function SearchPage() {
 
                   return (
                   <article
-                    className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60"
+                    className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md"
                     key={job.id}
                   >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -568,7 +584,7 @@ export default function SearchPage() {
                       </div>
                     </div>
 
-                    <section className="mt-5 rounded-md border border-teal-100 bg-teal-50 px-4 py-4">
+                    <section className="mt-5 rounded-xl border border-teal-100 bg-teal-50 px-4 py-4">
                       <h3 className="text-sm font-bold text-teal-900">
                         个性化匹配度
                       </h3>

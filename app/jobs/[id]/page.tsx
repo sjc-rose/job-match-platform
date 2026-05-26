@@ -118,7 +118,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
       <>
         <PublicNav />
         <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-16 text-slate-950">
-          <section className="w-full max-w-xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-xl shadow-slate-200/70">
+          <section className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             <h1 className="text-3xl font-bold tracking-tight">职位不存在</h1>
             <p className="mt-4 text-sm leading-6 text-slate-600">
               这个职位可能已下线，或当前国内示例数据中没有对应记录。
@@ -148,7 +148,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
     <>
       <PublicNav />
       <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950 sm:px-10">
-        <article className="mx-auto max-w-4xl rounded-lg border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70 sm:p-8">
+        <article className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-col gap-6 border-b border-slate-100 pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-4xl font-bold tracking-tight text-slate-950">

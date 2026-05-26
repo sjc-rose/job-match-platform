@@ -99,6 +99,18 @@ function getStatusLabel(status: string) {
   return status || "未设置";
 }
 
+function getMatchScoreClassName(score: number) {
+  if (score >= 80) {
+    return "bg-emerald-50 text-emerald-700";
+  }
+
+  if (score >= 50) {
+    return "bg-teal-50 text-teal-700";
+  }
+
+  return "bg-amber-50 text-amber-700";
+}
+
 export default async function RecommendationsPage() {
   const user = await getCurrentUser();
 
@@ -234,11 +246,11 @@ export default async function RecommendationsPage() {
 
           <section className="mt-10">
             {jobs.length === 0 ? (
-              <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-600 shadow-lg shadow-slate-200/60">
+              <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600 shadow-sm">
                 暂无可推荐职位
               </div>
             ) : recommendations.length === 0 ? (
-              <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-lg shadow-slate-200/60">
+              <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
                 <p className="text-base font-semibold text-slate-900">
                   暂无可推荐职位
                 </p>
@@ -262,7 +274,7 @@ export default async function RecommendationsPage() {
                 <div className="grid gap-5 lg:grid-cols-2">
                   {recommendations.map(({ job, match }) => (
                   <article
-                    className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60"
+                    className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md"
                     key={job.id}
                   >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -274,7 +286,11 @@ export default async function RecommendationsPage() {
                           {job.company}
                         </p>
                       </div>
-                      <div className="rounded-md bg-teal-50 px-4 py-3 text-sm font-bold text-teal-700">
+                      <div
+                        className={`rounded-full px-4 py-2 text-sm font-bold ${getMatchScoreClassName(
+                          match.score ?? 0,
+                        )}`}
+                      >
                         匹配度 {match.score ?? 0}%
                       </div>
                     </div>
@@ -306,14 +322,17 @@ export default async function RecommendationsPage() {
                       </div>
                     </dl>
 
-                    <div className="mt-5 rounded-md border border-teal-100 bg-teal-50 px-4 py-4">
+                    <div className="mt-5 rounded-xl border border-teal-100 bg-teal-50 px-4 py-4">
                       <h3 className="text-sm font-bold text-teal-900">
                         推荐理由
                       </h3>
                       <ul className="mt-3 space-y-2 text-sm text-teal-800">
                         {match.reasons.slice(0, 3).map((reason) => (
-                          <li className="rounded-md bg-white/70 px-3 py-2" key={reason}>
-                            - {reason}
+                          <li
+                            className="inline-flex rounded-full bg-white/80 px-3 py-1.5"
+                            key={reason}
+                          >
+                            {reason}
                           </li>
                         ))}
                       </ul>

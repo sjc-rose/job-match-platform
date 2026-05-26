@@ -7,7 +7,7 @@ export default function SignupPage() {
     <>
       <PublicNav />
       <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-16 text-slate-950">
-        <section className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/70">
+        <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <div className="text-center">
             <Link
               className="text-sm font-semibold text-teal-700 transition hover:text-teal-800"

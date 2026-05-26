@@ -239,7 +239,7 @@ export default async function AdminStatsPage() {
         <section className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
           {stats.summaryCards.map((card) => (
             <article
-              className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60"
+              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
               key={card.label}
             >
               <p className="text-sm font-medium text-slate-500">{card.label}</p>
@@ -251,7 +251,7 @@ export default async function AdminStatsPage() {
         </section>
 
         <section className="mt-10 grid gap-6 lg:grid-cols-2">
-          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60">
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-bold text-slate-950">
               按 source 统计
             </h2>
@@ -260,7 +260,7 @@ export default async function AdminStatsPage() {
             </div>
           </article>
 
-          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60">
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-bold text-slate-950">
               按 city 统计（前 10）
             </h2>
@@ -270,7 +270,7 @@ export default async function AdminStatsPage() {
           </article>
         </section>
 
-        <section className="mt-10 rounded-lg border border-slate-200 bg-white shadow-lg shadow-slate-200/60">
+        <section className="mt-10 rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-3 border-b border-slate-200 p-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-xl font-bold text-slate-950">

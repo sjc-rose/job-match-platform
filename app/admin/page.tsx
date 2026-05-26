@@ -188,13 +188,19 @@ export default function AdminPage() {
             >
               数据源管理
             </Link>
+            <Link
+              className="inline-flex justify-center rounded-md border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-950/10"
+              href="/admin/maintenance"
+            >
+              系统维护
+            </Link>
           </div>
         </section>
 
         <section className="mt-10 grid gap-5 md:grid-cols-3">
           {statCards.map((card) => (
             <article
-              className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60"
+              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
               key={card.label}
             >
               <p className="text-sm font-medium text-slate-500">{card.label}</p>
@@ -206,13 +212,13 @@ export default function AdminPage() {
         </section>
 
         {errorMessage ? (
-          <section className="mt-8 rounded-lg border border-red-200 bg-white p-6 text-center text-red-600 shadow-lg shadow-slate-200/60">
+          <section className="mt-8 rounded-2xl border border-red-200 bg-white p-6 text-center text-red-600 shadow-sm">
             {errorMessage}
           </section>
         ) : null}
 
         <section className="mt-10 grid gap-6 lg:grid-cols-2">
-          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60">
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-xl font-bold text-slate-950">
                 最近 10 条搜索记录
@@ -269,7 +275,7 @@ export default function AdminPage() {
             </div>
           </article>
 
-          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60">
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-xl font-bold text-slate-950">
                 最近 10 条收藏记录
